@@ -76,7 +76,8 @@ After creating the meta data frame, you are ready to run *crupR*.
 
 #### *Step 0: Normalize the ChIPseq counts*
 
-*crupR* needs normalized ChIPseq counts for its prediction, so we offer an additional function to normalize the ChIPseq files beforehand. You need to normalize each ChIPseq files for each replicate of each condition, which means we need to run *crupR* twice for our example files. Please note, that *crupR* can only normalize bam files for the genomes mm9, mm10, hg19 and hg38 or for a costum genome (which needs to be a Seinfo objects).  
+*crupR* needs normalized ChIPseq counts for its prediction, so we offer an additional function to normalize the ChIPseq files beforehand. You need to normalize the ChIP-seq experiments for every replicate of every condition. In our example files two conditions with one replicate each are present. 
+Thus, we must run `normalize()`twice. Please note, that *crupR* can only normalize BAM files for the genome builts mm9, mm10, hg19 and hg38 or for a costum genome (which needs to be a Seqinfo object).  
 
 ```{r}
 normalized_1 <- crupR::normalize(metaData = metaData, condition = 1, replicate = 1, genome = "mm10", 
@@ -84,33 +85,23 @@ normalized_1 <- crupR::normalize(metaData = metaData, condition = 1, replicate =
 normalized_2 <- crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", 
                                 sequencing = "paired", C = 2)
 ```
+If an input experiment is not availabe, *crupR* also offers and input-free mode (check the vignette or documentation of `normalize()` for more information).
 The output of `normalize()`  should be a list of length 2 containing the meta data of the samples that were normalized and a GRanges object containing the normalized ChIPseq counts for the binned genome of your choice. 
-Per default, the files are input normalized. However, in case input experiments were not conducted or input files are not available for other reasons, *crupR* also offers the possibility of an input free mode. The output file will have the same structure.
-Additionally, *crupR* offers the possibility to specify certain chromosmes that should be considered during the normalization, while discarding the remaining chromosomes. This might be relevant for users who wish to look for enhancers on specific chromosomes or who use BAM files that contain reads on only a few selected chromosomes. Specifying the chromsomes can improve runtime and also yields a smaller GRanges objects.
-To specify the chromosomes the parameter *chroms* needs to be set by using a vector that contains the relevant chrosome names. You need to make sure, that the style of the chromosome names matches the style of the chromsome names in the respective bam file. I.e. if a BAḾ file uses the prefix "chr", then the chromosome names in the vector need to include the prefix, too. The resulting GRanges objects can be used as input for the next step. However, the subsequent steps will only consider the information on the specified chromosome(s).
 
 #### *Step 1: Predict active enhancers with crupR*
 
-Now, the normalized ChIPseq counts can be used to predict the occurrence of active enhancers on the genome of your choice.
-Again, you'll have to run this step for each replicate of each condition, basically for each output of the normalization step.
+Now, the normalized ChIP-seq counts can be used to predict the enhancer activity on the genome of your choice.
 
 ```{r}
 prediction_1 <- crupR::getEnhancers(data = normalized_1, C = 2)
 prediction_2 <- crupR::getEnhancers(data = normalized_2, C = 2)
 ```
-
-Per default, this function uses a classifier consisting of two random forests to predict the probability of an bin being an active enhancer. This default classifier was trained on mESC data. It is also possible to use your own classifier if you wish to do so. In that case you must specify the directory containing the classifiers. However, you need to make sure that the directory contains two classifiers that predict the same events that the default random forests predict. That means one classifer has to classify active vs. inactive genomic ranges, while the other one must classify enhancer vs active promoter regions. Additionally, the two classifiers also need to be named "active_vs_inactive.rds" and "enhancer_vs_active_promoter.rds" respectively. This is necessary so that *crupR* is able to accurately identify them.   
-
 The output of this step is a list containing the truncated meta data file containing the information about the respective condition and replicate and a GRanges file containing the the binned genome with the enhancer prediction values for each bin. 
 
 #### *Step 1.5: Find enhancer peaks and super enhancers with crupR*
 
-*crupR* offers the `getSE()` function as an additional step after the enhancer prediction. Enhancers that are in close proximity are summarized into super enhancers during this step. However, this step does not solely return these super enhancers, but also all enhancer peak calls.
-
-`getSE()` uses the output of the last step (enhancerPrediction), meaning the list with the meta data and the GRanges object, as input. There are two additnal input parameters to specifify the process:
-* "cutoff": a threshold for the prediction values of the peaks (default: 0.5). The higher the cutoff, the stricter the peak calling process.
-* "distance": the maximimum distance (bp) between peaks for clustering into superenhancers (default:12500). The lower the distance, the closer the single enhancers or peaks need to be in order to be clustered together.
-A short example:
+*crupR* offers the `getSE()` function as an additional step after the enhancer prediction. Enhancers that are in close proximity are summarized into super enhancers during this step.
+`getSE()` uses the output of the last step (enhancerPrediction), meaning the list with the meta data and the GRanges object, as input. 
 ```{r}
 se <- crupR::getSE(data = prediction_2, C = 2)
 ```
@@ -122,7 +113,7 @@ This step is not necessary for the next ones and can be skipped if one isn't int
 
 In the second workflow step, the *crupR* function `getDynamics()` defines dynamic enhancer regions by applying a Kolmogorov-Smirnov test directly on the enhancer probabilities in a pairwise manner.
 
-Before running the actual function, a small preparation step is necessary. The output lists of the previous step are used as input, but need to be contained by one file. Thus, they must all be put into one list.
+Before running the actual function, the output objects from the prior steps need to be put in one list.
 ```{r}
 predictions <- list(prediction_1, prediction_2)
 ```
@@ -132,21 +123,9 @@ clusters <- crupR::getDynamics(data = predictions, C = 2)
 ```
 The output of this step is a list containing the complete meta data file and the condition-specific clusters in a GRanges object.
 
-##### *The parameters*
-
-`getDynamics()` possesses a rather extensive set of paremeters that are not as self-explanatory as the ones of the previous steps. Therefore, this subsection offers more in detail explanations of their use. 
-
-*w_0: Since comparing all the enhancer regions between two conditions to find siginificant clusters would be too expensive, a filter step was included. In this step, enhancers whose normalized prediction means did not differ strongly enough were discared before running the actual test. w_0 is the minimum difference between the means in order to be considered for the comparison. The default is 0.5.
-
-*cutoff: The threshold value for the p-values that are computed during the clustering process. The default is 0.05.
-
-*W: Number of bins +/- the current bin that should be included when calculating the p-values. The default is 10. However, the range for values that produce enhancer clusters of a realistic size is limited to [2, 30]. 
-
-*C: Number of cores that should be used for parallel processing. The default is 1.
-
 ##### *Visualization of the clusters using `plotSummary()`*
 
-As trying to decode the patterns for each cluster can be a bit complicated and also take some time, *crupR* offers the visualization function `plotSummary()` for the detected enhancer clusters. The function shows the boxplots of the median probabilities of the enhancers of each condition for each cluster. This is a simple way of seeing which clusters are active in which conditions. 
+As trying to decode the patterns for each cluster can be a bit complicated and also take some time, *crupR* offers the visualization function `plotSummary()` for the detected enhancer clusters. The function shows the boxplots of the median probabilities of the enhancers. This is a simple way of checking which clusters are active in which conditions. 
 
 ```{r}
 crupR::plotSummary(clusters)
@@ -176,21 +155,6 @@ targets <- crupR::getTargets(data=clusters, expr = expression, genome = "mm10", 
 ```
 
 In case another genome is used or a different BED file is preferred, providing the path to the BED file is necessary.
-Per default *crupR* chooses the genes that are in the same TAD as the enhancer cluster as candidate genes. Then, the expression values of those candidate genes and enhancer probabilities are correlated to identify putative target genes. However, *crupR* also offers an alternative approach that uses the nearest gene as candidate gene. This approach does not require TAD regions and is convenient when those are not available for some reason.
-The output of `getTargets()` should be a list containing two elements. The first element should be the full meta data frame that was constructed at the beginnin , because all the truncated meta data frames are merged during this step. The second element should be a GRanges file containing the computed units. There are 9 meta columns in the resulting GRanges, thus 12 columns in total:
-
-*seqnames: chr of the dynamic enhancer region
-*ranges: start and end of the dynamic enhancer region
-*strand: strand of the dynamic enhancer region
-*cluster: associated clusters of the dynamic enhancer region
-*cond1_1 & cond1_2: the best probability values for each region per sample
-*TAD_COORDINATES: the chromosome and coordinates of the TAD in which the dynamic enhancer region is located
-*CORRELATED_GENE: the ID of the gene that is correlated with the dynamic enhancer region
-*CORRELATED_GENE_CHR: the chromosome of the gene that is correlated with the dynamic enhancer region
-*CORRELATED_GENE_PROMOTER_START: start of the promoter of the gene that is correlated with the dynamic enhancer region
-*CORRELATED_GENE_PROMOTER_END: end of the promoter of the gene that is correlated with the dynamic enhancer region
-*CORRELATION: correlation value
-
 
 #### *Exporting the files*
 After running the *crupR* pipeline, you might want to save the resulting GRanges objects. *crupR* provides the function `saveFiles()`that exports the different files in suitable formats. 
