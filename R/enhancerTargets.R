@@ -43,42 +43,42 @@
 #' @importFrom utils read.table
 
 getTargets <- function(data, expr, genome, TAD.file = NULL, cutoff = 0.9, nearest = FALSE, C = 1){
-  start_time <- Sys.time()
-  cat('\n')
-  
-  metaData <- data$metaData
-  conds <- unique(metaData$condition)
-  gr<- data$sumFile
-  GenomeInfoDb::seqlevels(gr) <- paste0("chr", gsub("chr|Chr","", GenomeInfoDb::seqlevels(gr)))
-  GenomeInfoDb::genome(gr) <- genome
-  
-  IDs <- list()
-  for(i in seq_along(conds)){
-    sub = subset(metaData, condition == conds[i])
+    start_time <- Sys.time()
+    cat('\n')
+    
+    metaData <- data$metaData
+    conds <- unique(metaData$condition)
+    gr<- data$sumFile
+    GenomeInfoDb::seqlevels(gr) <- paste0("chr", gsub("chr|Chr","", GenomeInfoDb::seqlevels(gr)))
+    GenomeInfoDb::genome(gr) <- genome
+    
+    IDs <- list()
+    for(i in seq_along(conds)){
+    sub <- subset(metaData, condition == conds[i])
     if(is.numeric(conds[i])) IDs[[i]] <- paste0("cond", conds[i], "_", unique(sub$replicate))
     else IDs[[i]] <- paste0(conds[i], "_", unique(sub$replicate))
-  }
-  
-  if (!(genome %in% genome_values)) stop(paste0("Genome " , genome, " currently not provided. Choose one of:", paste(genome_values, collapse=',')));
-  if(cutoff < 0.5 | cutoff > 1) stop(paste0(cutoff, " is not in range [0.5,1]."));
-
-  if (genome == "mm10") {txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
-  } else if (genome == "mm9") {txdb  <- TxDb.Mmusculus.UCSC.mm9.knownGene::TxDb.Mmusculus.UCSC.mm9.knownGene
-  } else if (genome == "hg19") {txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene::TxDb.Hsapiens.UCSC.hg19.knownGene
-  } else if (genome == "hg38") {txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene::TxDb.Hsapiens.UCSC.hg38.knownGene	}
-
-  if (nearest == FALSE){
-      if (is.null(TAD.file) & genome == "mm10") {TAD.file   <- system.file("extdata", "mESC_mapq30_KR_all_TADs.bed", package = "crupR")
-      } else if (is.null(TAD.file) & genome != 'mm10')  {stop(paste0("You have to provide your own file with TAD domains (fitting to the genome of choice)."))}
-  }
-	
-  TAD <- GenomicRanges::GRanges()
-  if (nearest == FALSE){
-      TAD <- read.table(TAD.file, col.names = GR_header_short)
-      TAD <- GenomicRanges::makeGRangesFromDataFrame(TAD[which((TAD$end-TAD$start) > 0),])
-      GenomeInfoDb::seqlevels(TAD) = paste0("chr", gsub("chr|Chr","", GenomeInfoDb::seqlevels(TAD)))
-  }
-  units <- get_units(gr, expr, TAD, unlist(IDs), C, cutoff, txdb, nearest)
-  cat(paste0('time: ', format(Sys.time() - start_time), "\n"))
-  return( list("metaData" = data$metaData,  "Units" = units))
+    }
+    
+    if (!(genome %in% genome_values)) stop(paste0("Genome " , genome, " currently not provided. Choose one of:", paste(genome_values, collapse=',')));
+    if(cutoff < 0.5 | cutoff > 1) stop(paste0(cutoff, " is not in range [0.5,1]."));
+    
+    if (genome == "mm10") {txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
+    } else if (genome == "mm9") {txdb  <- TxDb.Mmusculus.UCSC.mm9.knownGene::TxDb.Mmusculus.UCSC.mm9.knownGene
+    } else if (genome == "hg19") {txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene::TxDb.Hsapiens.UCSC.hg19.knownGene
+    } else if (genome == "hg38") {txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene::TxDb.Hsapiens.UCSC.hg38.knownGene}
+    
+    if (nearest == FALSE){
+        if (is.null(TAD.file) & genome == "mm10") {TAD.file   <- system.file("extdata", "mESC_mapq30_KR_all_TADs.bed", package = "crupR")
+        } else if (is.null(TAD.file) & genome != 'mm10')  {stop(paste0("You have to provide your own file with TAD domains (fitting to the genome of choice)."))}
+    }
+    
+    TAD <- GenomicRanges::GRanges()
+    if (nearest == FALSE){
+        TAD <- read.table(TAD.file, col.names = GR_header_short)
+        TAD <- GenomicRanges::makeGRangesFromDataFrame(TAD[which((TAD$end-TAD$start) > 0),])
+        GenomeInfoDb::seqlevels(TAD) <- paste0("chr", gsub("chr|Chr","", GenomeInfoDb::seqlevels(TAD)))
+    }
+    units <- get_units(gr, expr, TAD, unlist(IDs), C, cutoff, txdb, nearest)
+    cat(paste0('time: ', format(Sys.time() - start_time), "\n"))
+    return( list("metaData" = data$metaData,  "Units" = units))
 }

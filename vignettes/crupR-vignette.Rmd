@@ -1,19 +1,20 @@
 ---
-title: "crupR-Vignette"
+title: "crupR Vignette"
 author:
 - name: Persia Akbari Omgba
-  affiliation: Mantainer
+  affiliation: Department of Genome Regulation, Max Planck Institute for Molecular Genetics, Berlin, 14195, Germany
   email: omgba@molgen.mpg.de
 - name: Verena Laupert
-  affiliation: Creator
-  email: laupert@molgen.mpg.de
+- name: Martin Vingron
+  affiliation: Department of Computational Molecular Biology, Max Planck Institute for Molecular Genetics, Berlin, 14195, Germany
+
 package: crupR
-output:
-  rmarkdown::html_document
+output: 
+  BiocStyle::html_document
 abstract: |
-  Description of your vignette
+  *crupR* is the R package implementation of the enhancer prediction pipeline CRUP (Condition-specific Regulatory Units Prediction) (Ramisch, A., Heinrich, V., Glaser, L.V. et al.). It aims to facilitate a streamlined analysis of histone modification ChIP-seq data in R and offers four main steps and two side functions. The main steps include normalization of ChIP-seq counts, application of a machine learning based approach to predict enhancer activity, grouping of condition-specific enhancer clusters, and detection of putative target genes. Additionally, it improves the original approach for the identification of enhancer clusters by utilising a sliding window method for the pairwise comparisons of conditions.
 vignette: |
-  %\VignetteIndexEntry{crupR-vignette}
+  %\VignetteIndexEntry{crupR Vignette}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -28,23 +29,24 @@ knitr::opts_chunk$set(
 
 *crupR* is a pipeline which aims to efficiently combine all its functions into a simple workflow. The main steps are:
 
-* `normalize()`: Normalizes the ChIPseq counts
-* `getPrediction()`: Uses the normalized ChIpseq counts to predict the occurence of active enhancers by applying a random forest based classifier
+* `normalize()`: Normalizes the ChIP-seq counts
+* `getPrediction()`: Uses the normalized ChIP-seq counts to predict the occurence of active enhancers by applying a random forest based classifier
 * `getDynamics()`: Uses the predicted probabilities to find dynamically changing, condition-specific enhancer clusters
-* `getTargets(()`: Uses RNAseq experiments to find possible target genes for the dynamic enhancers.
+* `getTargets()`: Uses RNA-seq experiments to find possible target genes for the dynamic enhancers.
 
 Beyond that, *crupR* offers an additional function to summarize the single enhancers into super enhancers (`getSE()`), a function to visualise the condition-specific enhancer clusters (`plotSummary()`) and a function to export all the files produced by each *crupR* step as appropriate formats (i.e. bed, BigWig or bedGraph).
 
+For a more detailed description of the computational method behind every step, please check the original CRUP publication: (https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1860-7) 
 
 # Getting started
 
 ## What will I need?
 
-In order to run *crupR*, you need ChIPseq experiments for the histone modifications H3K27ac, H3K4me1 and H3K4me3. Additionally, it is recommended to also inclue an input experiment for those experiments, however if these aren't available for some reason, you can run *crupR* without them. All the experiments need to be already aligned and indexed.
+In order to run *crupR*, you need ChIP-seq experiments for the histone modifications H3K27ac, H3K4me1 and H3K4me3. Additionally, it is recommended to also inclue an input experiment for those experiments. However, if these aren't available, you can run *crupR* without them. The samples need to be in BAM format and indexed.
 
 ## Prepare the metaData file
 
-After you prepared your ChIPseq files, you need to prepare the meta data frame. This data frame contains the paths to all the necessary bam files. It also contains further information about them, such as condition, replicate, histone modification and input file. 
+The meta data frame contains the paths to all the necessary BAM files. It also contains further information about them, such as condition, replicate, histone modification and input file. 
 
 Let's look at the metaData frame for the example files.
 First, we'll need the paths to the bam files and input files.
@@ -76,7 +78,8 @@ After creating the meta data frame, you are ready to run *crupR*.
 
 ## Step 0: Normalize the ChIPseq counts
 
-*crupR* needs normalized ChIPseq counts for its prediction, so we offer an additional function to normalize the ChIPseq files beforehand. You need to normalize each ChIPseq files for each replicate of each condition, which means we need to run *crupR* twice for our example files. Please note, that *crupR* can only normalize bam files for the genomes mm9, mm10, hg19 and hg38 or for a costum genome (which needs to be a Seinfo objects).  
+*crupR* needs normalized ChIP-seq counts for its prediction, so we offer an additional function to normalize the ChIP-seq samples beforehand. `normalize()` normalizes the counts of the samples for every replicate of every condition at once. The example files contain two conditions with one replicate each. Thus, `normalize()` needs to run twice for them. 
+Please note, that *crupR* can only normalize BAM files for the genomes mm9, mm10, hg19 and hg38 or for a costum genome (which needs to be a Seqinfo object).  
 
 ```{r}
 normalized_1 <- crupR::normalize(metaData = metaData, condition = 1, replicate = 1, genome = "mm10", 
@@ -84,13 +87,13 @@ normalized_1 <- crupR::normalize(metaData = metaData, condition = 1, replicate =
 normalized_2 <- crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", 
                                 sequencing = "paired", C = 2)
 ```
-The output of `normalize()`  should be a list of length 2 containing the meta data of the samples that were normalized and a GRanges object containing the normalized ChIPseq counts for the binned genome of your choice. 
+The output of `normalize()` is a list of length 2 containing the meta data of the samples that were normalized and a GRanges object containing the normalized ChIP-seq counts for the binned genome of your choice. 
 ```{r}
 normalized_1$metaData
 normalized_1$D
 ```
 
-Per default, the files are input normalized. However, in case input experiments were not conducted or input files are not available for other reasons, *crupR* also offers the possibility of an input free mode. The output file will have the same structure.
+Per default, the files are input normalized. However, if input files are not available, *crupR* also offers the possibility of an input free mode.
 
 ```{r}
 normalized_1_inputFree <- crupR::normalize(metaData = metaData, condition = 1, replicate = 1,
@@ -100,8 +103,8 @@ normalized_1_inputFree$D
 ```
 
 
-Additionally, *crupR* offers the possibility to specify certain chromosmes that should be considered during the normalization, while discarding the remaining chromosomes. This might be relevant for users who wish to look for enhancers on specific chromosomes or who use bam files that contain reads on only a few selected chromosomes. Specifying the chromsomes can improve runtime and also yields a smaller GRanges objects. 
-To specify the chromosomes the parameter *chroms* needs to be set by using a vector that contains the relevant chrosome names. You need to make sure, that the style of the chromosome names matches the style of the chromsome names in the respective bam file. I.e. if a bam file uses the prefix "chr", then the chromosome names in the vector need to include the prefix, too.
+Additionally, *crupR* offers the possibility to specify certain chromosomes that should be considered during the normalization, while discarding the other chromosomes. This might be relevant for users who use BAM files that contain reads on only a few selected chromosomes. Specifying the chromsomes can improve runtime and also yields a smaller GRanges objects. 
+To specify the chromosomes the parameter *chroms* needs to be set by using a vector that contains the relevant chromosome names. You need to make sure, that the style of the chromosome names matches the style of the chromsome names in the respective BAM file. I.e. if a BAM file uses the prefix "chr", then the chromosome names in the vector need to include the prefix, too.
 Here an example:
 
 ```{r}
@@ -109,11 +112,11 @@ normalized_1_chr8 <- crupR::normalize(metaData = metaData, condition = 1, replic
                                 sequencing = "paired", chroms = c("chr8"), C = 2)
 ```
 
-The resulting GRanges objectcan be used as input for the next step. However, *crupR* will only compute enhancer probabilities for chromosome 8 and the subsequent steps will only find enhancer cluster and target genes on chromosome 8.
+In the subsequent steps, *crupR* will only consider chromosome 8.
 
 ## Step 1: Predict active enhancers with crupR
 
-Now, the normalized ChIPseq counts can be used to predict the occurrence of active enhancers on the genome of your choice.
+Now, the normalized ChIP-seq counts can be used to predict the occurrence of active enhancers on the genome of your choice.
 Again, you'll have to run this step for each replicate of each condition, basically for each output of the normalization step.
 
 ```{r}
@@ -129,13 +132,13 @@ prediction_1_own_class <- crupR::getEnhancers(data = normalized_1, classifier = 
 
 However, you need to make sure that the directory contains two classifiers that predict the same events that the default random forests predict. That means one classifer has to classify active vs. inactive genomic ranges, while the other one must classify enhancer vs active promoter regions. Additionally, the two classifiers also need to be named "active_vs_inactive.rds" and "enhancer_vs_active_promoter.rds" respectively. This is necessary so that *crupR* is able to accurately identify them.   
 
-The output of this step is a list containing the truncated meta data file containing the information about the respective condition and replicate and a GRanges file containing the the binned genome with the enhancer prediction values for each bin. 
+The output of this step is a list containing the truncated meta data file containing the information about the respective condition and replicate and a GRanges file containing the binned genome with the enhancer prediction values for each bin. 
 
 ##Step 1.5: Find enhancer peaks and super enhancers with crupR
 
 *crupR* offers the `getSE()` function as an additional step after the enhancer prediction. Enhancers that are in close proximity are summarized into super enhancers during this step. However, this step does not solely return these super enhancers, but also all enhancer peak calls.
 
-`getSE()` uses the output of the last step (enhancerPrediction), meaning the list with the meta data and the GRanges object, as input. There are two additnal input parameters to specifify the process:
+`getSE()` uses the output of the last step (enhancerPrediction), meaning the list with the meta data and the GRanges object, as input. There are two additional input parameters to specifify the process:
 * "cutoff": a threshold for the prediction values of the peaks (default: 0.5). The higher the cutoff, the stricter the peak calling process.
 * "distance": the maximimum distance (bp) between peaks for clustering into superenhancers (default:12500). The lower the distance, the closer the single enhancers or peaks need to be in order to be clustered together.
 A short example:
@@ -146,23 +149,24 @@ se_close <- crupR::getSE(data = prediction_2, distance=10000, C = 2)
 ```
 Here, one can see that increasing the cutoff from the default value 0.5 to 0.7 reduced the number of detected single enhancers peaks. Subsequently, less enhaner clusters were founnd, too. Furthermore, decreasng the maximum distance to 10000 didn't change the number of detected single enhancer peaks as these solely depend on the cutoff value, but it increased the number of detected clusters. 
 
-The output of this step is a list containing the same meta data file as the input, the same GRanges object that was produced by `getPrediction()`, a GRanges object containing the single enhancer peak calls (can be saved as a .bedGraph file) and a GRanges object containing the super enhancers or rather peak clusters (can be saved as a bed file).
+The output of this step is a list containing the same meta data file as the input, the same GRanges object that was produced by `getPrediction()`, a GRanges object containing the single enhancer peak calls (can be saved as a bedGraph file) and a GRanges object containing the super enhancers or rather peak clusters (can be saved as a BED file).
 
-This step is not necessary for the next ones and can be skipped if one isn't interested in the peak calls or peak clusters.
+This step is not necessary for the next ones and can be skipped if one isn't interested in the single enhancers or super enhancers.
 
 ## Step 2: Find conditon-specific enhancer clusters
 
-In the second workflow step, the *crupR* function `getDynamics()` defines dynamic enhancer regions by applying a Kolmogorov-Smirnov test directly on the enhancer probabilities in a pairwise manner.
+The *crupR* function `getDynamics()` defines dynamic enhancer regions by applying a Kolmogorov-Smirnov test directly on the enhancer probabilities in a pairwise manner.
 
-Before running the actual function, a small preparation step is necessary. The output lists of the previous step are used as input, but need to be contained by one file. Thus, they must all be put into one list.
+Before running the actual function, the predictions of the prior step must all be put into one list.
+
 ```{r}
 predictions <- list(prediction_1, prediction_2)
 ```
-Now everything is ready for `enhancerDynamics()` to run.
+Now, everything is ready for `enhancerDynamics()` to run.
 ```{r}
 clusters <- crupR::getDynamics(data = predictions, C = 2)
 ```
-The output of this step is a list containing the complete meta data file and the condition-specific clusters in a GRanges object.
+The output of this step is a list containing the complete meta data file and the condition-specific clusters as a GRanges object.
 
 ```{r}
 #meta data
@@ -174,13 +178,13 @@ clusters$sumFile
 
 ### The parameters
 
-`getDynamics()` possesses a rather extensive set of paremeters that are not as self-explanatpry as the ones of the previous steps. Therefore, this subsection offers more in detail explanations of their use. 
+This subsection offers a more in detail explanations of the `enhancerDynamics()` parameters. 
 
-*w_0: Since comparing all the enhancer regions between two conditions to find siginificant clusters would be too expensive, a filter step was included. In this step, enhancers whose normalized prediction means did not differ strongly enough were discared before running the actual test. w_0 is the minimum difference between the means in order to be considered for the comparison. The default is 0.5.
+*w_0: Since comparing all genomic regions between two conditions to find significant clusters would be too expensive, a filter step was included. In this step, regions whose normalized prediction means did not differ strongly enough were discared before running the actual test. Thus, w_0 is the minimum difference between the means of the region in the two conditions. The default is 0.5.
 
 *cutoff: The threshold value for the p-values that are computed during the clustering process. The default is 0.05.
 
-*W: Number of bins +/- the current bin that should be included when calculating the p-values. The default is 10. However, the range for values that produce enhancer clusters of a realistic size is limited to [2, 30]. 
+*W: Number of bins +/- the current bin that should be included when calculating the p-values. The default is 10. The range for possible values is [2, 30]. 
 
 *C: Number of cores that should be used for parallel processing. The default is 1.
 
@@ -210,8 +214,8 @@ For the function `getTargets()`the output of the step before is not sufficient. 
 expression <- readRDS(file = system.file("extdata", "expressions.rds", package="crupR"))
 ```
 
-However, there is no in-built function that calculates the gene expression counts from RNAseq experiments. That means the user has to generate this file by themselves. Please make sure that the column names for the columns that contain the gene expression counts of each sample are the same as the column names of the columns that contain the enhancer probabilities of each sample, i.e. "cond1_1", "cond1_2", "cond2_1" and so on. 
-Let's take a look at the given expression object:
+However, there is no in-built function that calculates the gene expression counts from RNA-seq experiments. That means the user has to generate this file by themselves. Please make sure that the column names for the columns that contain the gene expression counts of each sample are the same as the column names of the columns that contain the enhancer probabilities of each sample, i.e. "cond1_1", "cond1_2", "cond2_1" and so on. 
+Let's take a look at the example expression object:
 ```{r}
 expression
 ```
@@ -220,14 +224,13 @@ Like you can see, the meta data columns include the gene IDs and the expression 
 
 ### Running `getTargets()`
 
-Looking for the enhancer targets requires - besides the gene expression counts - a .bed file containing TADs for the genome of your choice. In case mm10 is used, *crupR* provides a suitable .bed file which is also used per default for mm10 data. In this case, simply running the code below is sufficient:
+Looking for the enhancer targets requires - besides the gene expression counts - a BED file containing TADs for the genome of your choice. In case mm10 is used, *crupR* provides a suitable BED file which is also used per default for mm10 data. In this case, simply running the code below is sufficient:
 
 ```{r}
 targets <- crupR::getTargets(data=clusters, expr = expression, genome = "mm10", C = 2)
 ```
 
-In case another genome is used or a different .bed file is preferred, providing the path to the .bed file is necessary.
-
+In case another genome is used or a different BED file is preferred, providing the path to this BED file is necessary.
 
 ```{r}
 path_to_bed <- system.file("extdata", "mESC_mapq30_KR_all_TADs.bed", package="crupR")
@@ -250,7 +253,7 @@ The output of `getTargets()` should be a list containing two elements. The first
 targets$Units
 ```
  
-As you can see, there are 9 meta columns in this GRanges, thus 12 columns in total:
+As you can see, there are 9 meta data columns in this GRanges, thus 12 columns in total:
 
 *seqnames: chr of the dynamic enhancer region
 *ranges: start and end of the dynamic enhancer region
@@ -266,7 +269,7 @@ As you can see, there are 9 meta columns in this GRanges, thus 12 columns in tot
 
 
 # Exporting the files
-After running the *crupR* pipeline, you might want to save the resulting GRanges objects. *crupR* provides the function `saveFiles()`that exports the different files in suitable formats. 
+After running the *crupR* pipeline, you might want to save the results. *crupR* provides the function `saveFiles()`that exports the different files in suitable formats. 
 
 In total, there are X possible formats: "bigWig", "bedGraph", "rds", "bed", "beds" and "UCSC". However, the format to export your file to depends on the *crupR* step:
 
@@ -294,7 +297,7 @@ Note that the UCSC format needs a specification regarding wether or not the "nea
 ```{r, eval = FALSE}
 saveFiles(data = targets_nearest, modes = "UCSC", outdir = out_dir, nearest = TRUE)
 ```
-The "nearest" parameter is False by default and only needs to be changed when the "UCSC" mode was chosen (and the units were calculated in the "nearest" mode).
+The "nearest" parameter is False by default and only needs to be changed when the "UCSC" mode was chosen and the units were predicted in the "nearest" mode.
 
 Note that you could theoretically also use the modes "rds" and "bigWig" for the list `se`, as the output of `getSE()`also contains the same GRanges file as the output of `getEnhancers()`. Also note that "bed" can only be used for a `getSE()`output, while "beds" is exclusively used for a `getDynamics()` output. 
 

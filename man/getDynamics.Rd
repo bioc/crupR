@@ -33,22 +33,26 @@ Clusters the active enhancer into condition-specific groups
 \examples{
                                            
 #recreate the outputs of getEnhancers()
-files <- c(system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
-           system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
-           system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
-inputs <- rep(system.file("extdata", "Condition1.Input.bam", package="crupR"), 3)
-inputs2 <- rep(system.file("extdata", "Condition2.Input.bam", package="crupR"), 3)  
-metaData <- data.frame(HM = rep(c("H3K4me1", "H3K4me3", "H3K27ac"),2),
-                       condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
-                       bamFile = files, inputFile = c(inputs, inputs2))
+files <- c( system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
+            system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
+            system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
+            system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
+            system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
+            system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
+inputs <- rep(system.file("extdata", "Condition1.Input.bam", 
+package="crupR"), 3)
+inputs2 <- rep(system.file("extdata", "Condition2.Input.bam", 
+package="crupR"), 3)  
+metaData <- data.frame( HM = rep(c("H3K4me1", "H3K4me3", "H3K27ac"),2),
+                        condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
+                        bamFile = files, inputFile = c(inputs, inputs2))
 metaData1 <- subset(metaData, condition == 1)
 metaData2 <- subset(metaData, condition == 2)
-pred1 <- readRDS(system.file("extdata", "condition1_predictions.rds", package = "crupR"))
+pred1 <- readRDS(system.file(  "extdata", "condition1_predictions.rds", 
+                                package = "crupR"))
 pred1 <- list("metaData" = metaData1, "D" = pred1)
-pred2 <- readRDS(system.file("extdata", "condition2_predictions.rds", package = "crupR"))
+pred2 <- readRDS(system.file(  "extdata", "condition2_predictions.rds", 
+                               package = "crupR"))
 pred2 <- list("metaData" = metaData2, "D" = pred2)
 #put the outputs in a list
 predictions <- list(pred1, pred2)

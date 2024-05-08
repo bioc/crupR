@@ -61,7 +61,7 @@ normalize(metaData = metaData, condition = 1, replicate = 1,
     genome = "mm10", sequencing = "paired", C = 2)
 
 #Example for a customized genome:
-genome = GenomeInfoDb::Seqinfo(seqnames=c("chr3", "chr4", "chrM"),
-              	seqlengths=c(1000, 2000, 500))
+genome = GenomeInfoDb::Seqinfo( seqnames=c("chr3", "chr4", "chrM"),
+                                seqlengths=c(1000, 2000, 500))
 
 }

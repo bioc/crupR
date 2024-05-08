@@ -30,8 +30,8 @@
 #'     genome = "mm10", sequencing = "paired", C = 2)
 #' 
 #' #Example for a customized genome:
-#' genome = GenomeInfoDb::Seqinfo(seqnames=c("chr3", "chr4", "chrM"),
-#'               	seqlengths=c(1000, 2000, 500))
+#' genome = GenomeInfoDb::Seqinfo( seqnames=c("chr3", "chr4", "chrM"),
+#'                                 seqlengths=c(1000, 2000, 500))
 #'
 #' @export
 #' @importFrom bamsignals bamProfile
@@ -46,59 +46,59 @@
 #' @importFrom BSgenome.Hsapiens.UCSC.hg38 BSgenome.Hsapiens.UCSC.hg38
 
 normalize <- function(metaData, condition, replicate, genome, mapq = 10, sequencing, input.free = FALSE, chroms = NULL, C = 1) {
-  start_time <- Sys.time()
-  cat('\n')
-  
-  m <- metaData[which(metaData$condition == condition & metaData$replicate == replicate),]
-  if(nrow(m) != 3){
-    if(nrow(m) == 0) stop(paste0("The chosen combination of condition and replicate is not valid.\n There are no files for condition ", condition," replicate ", replicate))
+    start_time <- Sys.time()
+    cat('\n')
+    
+    m <- metaData[which(metaData$condition == condition & metaData$replicate == replicate),]
+    if(nrow(m) != 3){
+        if(nrow(m) == 0) stop(paste0("The chosen combination of condition and replicate is not valid.\n There are no files for condition ", condition," replicate ", replicate))
     else if(nrow(m) > 3) stop(paste0("There are too many bam files for condition ", condition," replicate ", replicate))
     else stop(paste0("There are not enough bam files for condition ", condition," replicate ", replicate))
-  }
-
-  for(path in m$bamFile) check_file(path)
-  if(! input.free) for(path in m$inputFile) check_file(path)
-  
-  hm <- c()
-  for(i in seq_along(hm_values)) hm <- c(hm, normalizePath(as.vector(m[which(m$HM == hm_values[i]),]$bamFile)[1]))
-  if(input.free == FALSE) for(i in seq_along(hm_values)) hm <- c(hm, normalizePath(as.vector(m[which(m$HM == hm_values[i]),]$inputFile)[1]))
-
-  bamHM <- hm[seq_len(3)]
-  if(input.free == TRUE){bamInp <- NULL
-  }  else{bamInp <- unique(hm[4:length(hm)])}
-  
-  if (!is(genome, 'Seqinfo') && genome == "mm10") {genome <- GenomeInfoDb::seqinfo(BSgenome.Mmusculus.UCSC.mm10::BSgenome.Mmusculus.UCSC.mm10)
-  }  else if (!is(genome, 'Seqinfo') && genome == "mm9") {genome  <- GenomeInfoDb::seqinfo(BSgenome.Mmusculus.UCSC.mm9::BSgenome.Mmusculus.UCSC.mm9)
-  }  else if (!is(genome, 'Seqinfo') && genome == "hg19") {genome <- GenomeInfoDb::seqinfo(BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19)
-  }  else if (!is(genome, 'Seqinfo') && genome == "hg38") {genome <- GenomeInfoDb::seqinfo(BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38)
-  }  else if(!is(genome, 'Seqinfo')) {stop(paste0("Your genome is neither one of ",paste0(genome_values, collapse=',')," nor is it a valid Seqinfo object."))}
-
-  ##################################################################
-  # get and adjust binned genome
-  ##################################################################
-
-  cat("Prepare the binned genome ...\n")
-  
-  gr <- get_binned_genome(genome, chr=chroms)
-  bf <- Rsamtools::BamFile(bamHM[1])
-  si <- GenomicRanges::seqinfo(bf)
-  if (!("chr1" %in% names(Rsamtools::scanBamHeader(bamHM[1])[[1]]$targets)))  GenomeInfoDb::seqlevelsStyle(gr) <- GenomeInfoDb::seqlevelsStyle(si)[1]
-  
-  ##################################################################
-  # get counts from ChIP-seq experiments
-  ##################################################################
-
-  cat("Get summarized counts from ChIP-seq experiments ...\n")
-
-  names <- c(hm_values, paste0("Input_",hm_values))
-  if(input.free) names <- hm_values
-  if (length(unique(bamInp)) == 1) {
-    bamInp <- bamInp[1]
-    names = c(hm_values, "Input_All")
-  }
-  
-  if (sequencing == "paired") {
-      counts <- parallel::mcmapply(
+    }
+    
+    for(path in m$bamFile) check_file(path)
+    if(! input.free) for(path in m$inputFile) check_file(path)
+    
+    hm <- c()
+    for(i in seq_along(hm_values)) hm <- c(hm, normalizePath(as.vector(m[which(m$HM == hm_values[i]),]$bamFile)[1]))
+    if(input.free == FALSE) for(i in seq_along(hm_values)) hm <- c(hm, normalizePath(as.vector(m[which(m$HM == hm_values[i]),]$inputFile)[1]))
+    
+    bamHM <- hm[seq_len(3)]
+    if(input.free == TRUE){bamInp <- NULL
+    }  else{bamInp <- unique(hm[4:length(hm)])}
+    
+    if (!is(genome, 'Seqinfo') && genome == "mm10") {genome <- GenomeInfoDb::seqinfo(BSgenome.Mmusculus.UCSC.mm10::BSgenome.Mmusculus.UCSC.mm10)
+    }  else if (!is(genome, 'Seqinfo') && genome == "mm9") {genome  <- GenomeInfoDb::seqinfo(BSgenome.Mmusculus.UCSC.mm9::BSgenome.Mmusculus.UCSC.mm9)
+    }  else if (!is(genome, 'Seqinfo') && genome == "hg19") {genome <- GenomeInfoDb::seqinfo(BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19)
+    }  else if (!is(genome, 'Seqinfo') && genome == "hg38") {genome <- GenomeInfoDb::seqinfo(BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38)
+    }  else if(!is(genome, 'Seqinfo')) {stop(paste0("Your genome is neither one of ",paste0(genome_values, collapse=',')," nor is it a valid Seqinfo object."))}
+    
+    ##################################################################
+    # get and adjust binned genome
+    ##################################################################
+    
+    cat("Prepare the binned genome ...\n")
+    
+    gr <- get_binned_genome(genome, chr=chroms)
+    bf <- Rsamtools::BamFile(bamHM[1])
+    si <- GenomicRanges::seqinfo(bf)
+    if (!("chr1" %in% names(Rsamtools::scanBamHeader(bamHM[1])[[1]]$targets)))  GenomeInfoDb::seqlevelsStyle(gr) <- GenomeInfoDb::seqlevelsStyle(si)[1]
+    
+    ##################################################################
+    # get counts from ChIP-seq experiments
+    ##################################################################
+    
+    cat("Get summarized counts from ChIP-seq experiments ...\n")
+    
+    names <- c(hm_values, paste0("Input_",hm_values))
+    if(input.free) names <- hm_values
+    if (length(unique(bamInp)) == 1) {
+        bamInp <- bamInp[1]
+        names <- c(hm_values, "Input_All")
+    }
+    
+    if (sequencing == "paired") {
+        counts <- parallel::mcmapply(
                 bamsignals::bamProfile, 
                 bampath = c(bamHM, bamInp),
                 MoreArgs = list(gr = gr, 
@@ -110,47 +110,47 @@ normalize <- function(metaData, condition, replicate, genome, mapq = 10, sequenc
                 verbose = FALSE),
                 mc.cores = C, 
                 SIMPLIFY = FALSE)
-
-  } else if (sequencing == "single") {
-      counts <- parallel::mcmapply(
-              bamsignals::bamProfile, 
-              bampath = c(bamHM, bamInp),
-              MoreArgs = list(gr = gr, 
-              binsize = 100,
-              mapqual = mapq,
-              ss = FALSE,
-              shift = 100,
-              filteredFlag = 1024,
-              verbose = FALSE),
-              mc.cores = C, 
-              SIMPLIFY = FALSE)
-  } else stop("Sequencing parameter is not valid.\n Choose one of:", paste(sequencing_values, collapse=','))
-  
-  for(i in seq_along(counts)) counts[[i]] <- unlist(as.list(counts[[i]]))
-  names(counts) <- names
-
-  ##################################################################
-  # get counts from ChIP-seq experiments
-  ##################################################################
-  if(! input.free){
-      cat("Normalize histone modifications by Input ...\n")
-
-      if ("Input_All" %in% names(counts)) countsNorm <- lapply( hm_values, function(x) log2((counts[[x]] + 1)/(counts[[paste0("Input_All")]] + 1)))
-      else countsNorm <- lapply( hm_values, function(x) log2((counts[[x]] + 1)/(counts[[paste0("Input_",x)]] + 1)))
-  }else countsNorm <- counts
-
-  ##################################################################
-  # create data matrix for all normalized ChIP-seq experiments
-  ##################################################################
-  cat("Create summarized data matrix ...\n")
-
-  GenomicRanges::mcols(gr) <-  matrix( unlist(countsNorm), ncol = 3, byrow = FALSE, dimnames = list(NULL, hm_values))
-  GenomeInfoDb::seqlevels(gr) <- paste0('chr', gsub('chr|Chr','',GenomeInfoDb::seqlevels(gr)))
-
-  n   <- GenomicRanges::mcols(gr)[,"H3K4me1"] + abs(min(GenomicRanges::mcols(gr)[,"H3K4me1"])) + 1
-  d <- GenomicRanges::mcols(gr)[,"H3K4me3"] + abs(min(GenomicRanges::mcols(gr)[,"H3K4me3"])) + 1
-  GenomicRanges::mcols(gr)[,"ratio"] <- log2(n/d)
-  
-  cat(paste0('time: ', format(Sys.time() - start_time), "\n"))
-  return(list(metaData = m, D = gr))
+    
+    } else if (sequencing == "single") {
+        counts <- parallel::mcmapply(
+                bamsignals::bamProfile, 
+                bampath = c(bamHM, bamInp),
+                MoreArgs = list(gr = gr, 
+                binsize = 100,
+                mapqual = mapq,
+                ss = FALSE,
+                shift = 100,
+                filteredFlag = 1024,
+                verbose = FALSE),
+                mc.cores = C, 
+                SIMPLIFY = FALSE)
+    } else stop("Sequencing parameter is not valid.\n Choose one of:", paste(sequencing_values, collapse=','))
+    
+    for(i in seq_along(counts)) counts[[i]] <- unlist(as.list(counts[[i]]))
+    names(counts) <- names
+    
+    ##################################################################
+    # get counts from ChIP-seq experiments
+    ##################################################################
+    if(! input.free){
+        cat("Normalize histone modifications by Input ...\n")
+        
+        if ("Input_All" %in% names(counts)) countsNorm <- lapply( hm_values, function(x) log2((counts[[x]] + 1)/(counts[[paste0("Input_All")]] + 1)))
+        else countsNorm <- lapply( hm_values, function(x) log2((counts[[x]] + 1)/(counts[[paste0("Input_",x)]] + 1)))
+    }else countsNorm <- counts
+    
+    ##################################################################
+    # create data matrix for all normalized ChIP-seq experiments
+    ##################################################################
+    cat("Create summarized data matrix ...\n")
+    
+    GenomicRanges::mcols(gr) <-  matrix( unlist(countsNorm), ncol = 3, byrow = FALSE, dimnames = list(NULL, hm_values))
+    GenomeInfoDb::seqlevels(gr) <- paste0('chr', gsub('chr|Chr','',GenomeInfoDb::seqlevels(gr)))
+    
+    n   <- GenomicRanges::mcols(gr)[,"H3K4me1"] + abs(min(GenomicRanges::mcols(gr)[,"H3K4me1"])) + 1
+    d <- GenomicRanges::mcols(gr)[,"H3K4me3"] + abs(min(GenomicRanges::mcols(gr)[,"H3K4me3"])) + 1
+    GenomicRanges::mcols(gr)[,"ratio"] <- log2(n/d)
+    
+    cat(paste0('time: ', format(Sys.time() - start_time), "\n"))
+    return(list(metaData = m, D = gr))
 }

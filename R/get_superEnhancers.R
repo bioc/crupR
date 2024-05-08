@@ -27,22 +27,22 @@
 #' @importFrom S4Vectors queryHits subjectHits
 
 getSE <- function(data, cutoff = 0.5, distance = 12500, C = 1){
-  start_time <- Sys.time()
-  cat('\n')
-  
-  if(cutoff < 0 | cutoff > 1) stop(paste0(cutoff, " is not a valid cutoff. Please choose a cutoff between 0 and 1."))
-  if(distance < 0) stop(paste0(distance, " is not a valid distance. Please choose a distance greater than 0."))
-  #if(!is.list(data) || ! names(data) %in% c('metaData', 'D')) stop('Input must be a list with names: \'metaData\' and \'D\'.')
-  if(!is.list(data) | ! all(names(data) %in% c('metaData', 'D'))) stop('Input must be a list with names: \'metaData\' and \'D\'.')
-  
-  peaks <- GenomicRanges::GRanges()
-  peaks <- c(peaks, get_enhancerPeaks(data$D, cutoff, C))
-  cat(paste0(length(peaks), " single enhancer peak(s) found.\n"))
-  
-  cluster <- GenomicRanges::GRanges()
-  cluster <- c(cluster, get_enhancerCluster(peaks, distance, C))
-  cat(paste0(length(cluster), " enhancer cluster(s) found.\n"))
-  
-  cat(paste0('time: ', format(Sys.time() - start_time), "\n"))
-  return(list("metaData" = data$metaData, "D" = data$D, "peaks" = peaks, "cluster" = cluster))
+    start_time <- Sys.time()
+    cat('\n')
+    
+    if(cutoff < 0 | cutoff > 1) stop(paste0(cutoff, " is not a valid cutoff. Please choose a cutoff between 0 and 1."))
+    if(distance < 0) stop(paste0(distance, " is not a valid distance. Please choose a distance greater than 0."))
+    #if(!is.list(data) || ! names(data) %in% c('metaData', 'D')) stop('Input must be a list with names: \'metaData\' and \'D\'.')
+    if(!is.list(data) | ! all(names(data) %in% c('metaData', 'D'))) stop('Input must be a list with names: \'metaData\' and \'D\'.')
+    
+    peaks <- GenomicRanges::GRanges()
+    peaks <- c(peaks, get_enhancerPeaks(data$D, cutoff, C))
+    cat(paste0(length(peaks), " single enhancer peak(s) found.\n"))
+    
+    cluster <- GenomicRanges::GRanges()
+    cluster <- c(cluster, get_enhancerCluster(peaks, distance, C))
+    cat(paste0(length(cluster), " enhancer cluster(s) found.\n"))
+    
+    cat(paste0('time: ', format(Sys.time() - start_time), "\n"))
+    return(list("metaData" = data$metaData, "D" = data$D, "peaks" = peaks, "cluster" = cluster))
 }

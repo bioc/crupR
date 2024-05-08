@@ -26,7 +26,7 @@ Nothing
 Function to save the different output objects of each step
 }
 \examples{
-\dontrun{
+\donttest{
 saveFiles(data = prediction_1_1, modes = c("bigWig", "rds"), outdir = "/example/dir/")
 saveFiles(data = dynamics, modes = "beds", outdir ="/example/dir/")
 saveFiles(data = targets, modes = "UCSC", outdir = "/example/dir/", nearest = TRUE)}

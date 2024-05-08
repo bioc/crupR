@@ -10,6 +10,4 @@ citEntry(entry="article",
          issue = 1,
          pages = 227,
          textVersion = 
-         paste("Heinrich, V., Ramisch, A., Vingron, M.", 
-               "Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2",
-                "Genome Biology 15(12):550 (2014)" ) )
+      "Ramisch, A., Heinrich, V., Glaser, L.V. et al. CRUP: a comprehensive framework to predict condition-specific regulatory units. Genome Biol 20, 227 (2019). https://doi.org/10.1186/s13059-019-1860-7" )

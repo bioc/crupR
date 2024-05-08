@@ -1,0 +1,4 @@
+The BAM files used for the tests and example code have been taken from the original CRUP publication (Ramisch et al., 2019). The test data can be found on the git repository for CRUP (https://github.com/VerenaHeinrich/CRUP).
+The files are deposited in https://github.com/VerenaHeinrich/CRUP/tree/master/TEST/DATA/ChIPseq . To cut down on disk space and run time, the BAM files have been further reduced to only contain reads in region chr8:26,841,601-26,847,600. The region was saved in the BED3 format and intersectBed by BEDtools was used to filter the reads.
+For the gene expression counts, the RNA-seq data was taken from https://github.com/VerenaHeinrich/CRUP/tree/master/TEST/DATA/RNAseq. The reads outside region chr8:1-129,401,200 were filtered using intersectBED. 
+To generate the gene expression matrix, the code of the function get_bamOverlaps in the file functions.R (https://github.com/VerenaHeinrich/CRUP/blob/master/BIN/functions.R). 
