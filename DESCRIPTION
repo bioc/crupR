@@ -46,7 +46,7 @@ Imports:
     utils,
     grDevices
 Depends:
-    R (>= 4.2.0)
+    R (>= 4.4.0)
 Suggests: testthat, BiocStyle, knitr, rmarkdown
 biocViews:
     DifferentialPeakCalling,
