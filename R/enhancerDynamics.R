@@ -99,7 +99,7 @@ getDynamics <- function(data, w_0 = 0.5, cutoff = 0.05, W = 10, C = 1){
     cat("Calculate pairwise p-values ...\n")
     pvalues <- get_pairwisePvalues(p = probs, I = IDs, w_0 = w_0, W = W,
                                     p.thres = cutoff, C = C)
-    
+    print(pvalues)
     cat("Get condition-specific enhancer peaks ...\n")
     probs <- get_cluster(p = probs, pvalues = pvalues, I = IDs)
     

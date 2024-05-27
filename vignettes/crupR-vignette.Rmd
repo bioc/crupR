@@ -51,7 +51,7 @@ The meta data frame contains the paths to all the necessary BAM files. It also c
 Let's look at the metaData frame for the example files.
 First, we'll need the paths to the bam files and input files.
 
-```{r}
+```{r setup-for-metadata}
 files <- c(system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
            system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
            system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
@@ -64,7 +64,7 @@ inputs <- c(rep(system.file("extdata", "Condition1.Input.bam", package="crupR"),
 
 Now we can build the meta data frame by adding the information about the hinstone modification, condition and replicate for each file. As there exists only one sample per condition, all of the files get replicate "1".
 
-```{r}
+```{r metadata}
 metaData <- data.frame(HM = rep(c("H3K4me1","H3K4me3","H3K27ac"),2),
                        condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
                        bamFile = files, inputFile = inputs)
@@ -81,21 +81,21 @@ After creating the meta data frame, you are ready to run *crupR*.
 *crupR* needs normalized ChIP-seq counts for its prediction, so we offer an additional function to normalize the ChIP-seq samples beforehand. `normalize()` normalizes the counts of the samples for every replicate of every condition at once. The example files contain two conditions with one replicate each. Thus, `normalize()` needs to run twice for them. 
 Please note, that *crupR* can only normalize BAM files for the genomes mm9, mm10, hg19 and hg38 or for a costum genome (which needs to be a Seqinfo object).  
 
-```{r}
+```{r run-normalize}
 normalized_1 <- crupR::normalize(metaData = metaData, condition = 1, replicate = 1, genome = "mm10", 
                                 sequencing = "paired", C = 2)
 normalized_2 <- crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", 
                                 sequencing = "paired", C = 2)
 ```
 The output of `normalize()` is a list of length 2 containing the meta data of the samples that were normalized and a GRanges object containing the normalized ChIP-seq counts for the binned genome of your choice. 
-```{r}
+```{r show-normalize}
 normalized_1$metaData
 normalized_1$D
 ```
 
 Per default, the files are input normalized. However, if input files are not available, *crupR* also offers the possibility of an input free mode.
 
-```{r}
+```{r show-parametets-normalize}
 normalized_1_inputFree <- crupR::normalize(metaData = metaData, condition = 1, replicate = 1,
                                           genome = "mm10", sequencing = "paired", input.free = TRUE, C = 2)
 normalized_1_inputFree$metaData
@@ -107,7 +107,7 @@ Additionally, *crupR* offers the possibility to specify certain chromosomes that
 To specify the chromosomes the parameter *chroms* needs to be set by using a vector that contains the relevant chromosome names. You need to make sure, that the style of the chromosome names matches the style of the chromsome names in the respective BAM file. I.e. if a BAM file uses the prefix "chr", then the chromosome names in the vector need to include the prefix, too.
 Here an example:
 
-```{r}
+```{r chromsomewise-normalize}
 normalized_1_chr8 <- crupR::normalize(metaData = metaData, condition = 1, replicate = 1, genome = "mm10", 
                                 sequencing = "paired", chroms = c("chr8"), C = 2)
 ```
@@ -119,14 +119,14 @@ In the subsequent steps, *crupR* will only consider chromosome 8.
 Now, the normalized ChIP-seq counts can be used to predict the occurrence of active enhancers on the genome of your choice.
 Again, you'll have to run this step for each replicate of each condition, basically for each output of the normalization step.
 
-```{r}
+```{r run-getEnhancers}
 prediction_1 <- crupR::getEnhancers(data = normalized_1, C = 2)
 prediction_2 <- crupR::getEnhancers(data = normalized_2, C = 2)
 ```
 
 Per default, this function uses a classifier consisting of two random forests to predict the probability of an bin being an active enhancer. This default classifier was trained on mESC data. It is also possible to use your own classifier if you wish to do so. In that case just run:
 
-```{r, eval = FALSE}
+```{r run-getEnhancers-ownclassifier, eval = FALSE}
 prediction_1_own_class <- crupR::getEnhancers(data = normalized_1, classifier = "path/to/classifier", C = 2)
 ```
 
@@ -142,7 +142,7 @@ The output of this step is a list containing the truncated meta data file contai
 * "cutoff": a threshold for the prediction values of the peaks (default: 0.5). The higher the cutoff, the stricter the peak calling process.
 * "distance": the maximimum distance (bp) between peaks for clustering into superenhancers (default:12500). The lower the distance, the closer the single enhancers or peaks need to be in order to be clustered together.
 A short example:
-```{r}
+```{r run-getSE}
 se <- crupR::getSE(data = prediction_2, C = 2)
 se_strict <- crupR::getSE(data = prediction_2, cutoff = 0.7, C = 2)
 se_close <- crupR::getSE(data = prediction_2, distance=10000, C = 2)
@@ -159,16 +159,16 @@ The *crupR* function `getDynamics()` defines dynamic enhancer regions by applyin
 
 Before running the actual function, the predictions of the prior step must all be put into one list.
 
-```{r}
+```{r list-predictions}
 predictions <- list(prediction_1, prediction_2)
 ```
 Now, everything is ready for `enhancerDynamics()` to run.
-```{r}
+```{r run-getDynamics}
 clusters <- crupR::getDynamics(data = predictions, C = 2)
 ```
 The output of this step is a list containing the complete meta data file and the condition-specific clusters as a GRanges object.
 
-```{r}
+```{r show-dynamics}
 #meta data
 clusters$metaData
 
@@ -194,7 +194,7 @@ As trying to decode the patterns for each cluster can be a bit complicated and a
 
 Let's take a look at the summary plot of the example files.
 
-```{r}
+```{r plotSummary}
 crupR::plotSummary(clusters)
 ```
 
@@ -210,13 +210,13 @@ The last step in the pipeline is the identification of the target genes that get
 For the function `getTargets()`the output of the step before is not sufficient. *crupR* requires additionally the gene expression counts for each condition and replicate all in one GRanges object. 
 *crupR* offers such an expression file for the the example sets.
 
-```{r}
+```{r get-expression}
 expression <- readRDS(file = system.file("extdata", "expressions.rds", package="crupR"))
 ```
 
 However, there is no in-built function that calculates the gene expression counts from RNA-seq experiments. That means the user has to generate this file by themselves. Please make sure that the column names for the columns that contain the gene expression counts of each sample are the same as the column names of the columns that contain the enhancer probabilities of each sample, i.e. "cond1_1", "cond1_2", "cond2_1" and so on. 
 Let's take a look at the example expression object:
-```{r}
+```{r show-expression}
 expression
 ```
 Like you can see, the meta data columns include the gene IDs and the expression counts of the genes for each condition (and replicate if given). Additional meta data columns should not interfer with `getTargets(()`, however naming one of the meta data columns incorrectly will result in an error. 
@@ -226,13 +226,13 @@ Like you can see, the meta data columns include the gene IDs and the expression 
 
 Looking for the enhancer targets requires - besides the gene expression counts - a BED file containing TADs for the genome of your choice. In case mm10 is used, *crupR* provides a suitable BED file which is also used per default for mm10 data. In this case, simply running the code below is sufficient:
 
-```{r}
+```{r run-getTargets}
 targets <- crupR::getTargets(data=clusters, expr = expression, genome = "mm10", C = 2)
 ```
 
 In case another genome is used or a different BED file is preferred, providing the path to this BED file is necessary.
 
-```{r}
+```{r run-getTargets-TADs}
 path_to_bed <- system.file("extdata", "mESC_mapq30_KR_all_TADs.bed", package="crupR")
 targets <- crupR::getTargets(data = clusters, expr = expression, genome = "mm10", TAD.file = path_to_bed, C = 2)
 ```
@@ -240,7 +240,7 @@ targets <- crupR::getTargets(data = clusters, expr = expression, genome = "mm10"
 #### Using the nearest genes
 Per default *crupR* chooses the genes that are in the same TAD as the enhancer cluster as candidate genes. Then, the expression values of those candidate genes and enhancer probabilities are correlated to identify putative target genes. However, *crupR* also offers an alternative approach that uses the nearest gene as candidate gene. This approach does not require TAD regions and is convenient when those are not available for some reason.
 
-```{r}
+```{r run-getTargets-nearest}
 targets_nearest <- crupR::getTargets(data = clusters, expr = expression, genome = "mm10", nearest = TRUE, C = 2)
 ```
 
@@ -249,7 +249,7 @@ targets_nearest <- crupR::getTargets(data = clusters, expr = expression, genome 
 
 The output of `getTargets()` should be a list containing two elements. The first element should be the full meta data frame that was constructed at the beginnin , because all the truncated meta data frames are merged during this step. The second element should be a GRanges file containing the computed units. Let's take a look at the GRanges file:
 
-```{r}
+```{r show-Targets}
 targets$Units
 ```
  
@@ -280,7 +280,7 @@ In total, there are X possible formats: "bigWig", "bedGraph", "rds", "bed", "bed
 
 If you want to export the files, you just have to use the output list of the respetive step as input and specify your desired format(s):
 
-```{r, eval = FALSE}
+```{r show-saveFiles, eval = FALSE}
 out_dir <- ""
 #save the GRanges object of the getEnhancers() step
 saveFiles(data = prediction_1, modes = c("bigWig", "rds"), outdir = out_dir)
@@ -294,7 +294,7 @@ saveFiles(data = targets, modes = "UCSC", outdir = out_dir)
 
 Note that the UCSC format needs a specification regarding wether or not the "nearest" mode was used when running `getTargets()`.
 
-```{r, eval = FALSE}
+```{r saveFiles-nearest, eval = FALSE}
 saveFiles(data = targets_nearest, modes = "UCSC", outdir = out_dir, nearest = TRUE)
 ```
 The "nearest" parameter is False by default and only needs to be changed when the "UCSC" mode was chosen and the units were predicted in the "nearest" mode.

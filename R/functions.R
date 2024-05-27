@@ -218,8 +218,10 @@ get_pairwisePvalues <- function(p, I, w_0, W, p.thres, C){
                     FUN = function(x)  get_KS.STATISTIC( z[(x - W):(x + W),], N),
                     mc.cores = C,
                     mc.allow.recursive = FALSE))
-        C_pKS2 <- utils::getFromNamespace("C_pKS2", "stats")
-        p.value[idx] <- 1 - .Call(C_pKS2, p = KS.FACTOR * D, tol = 0.000001)
+        #C_pKS2 <- utils::getFromNamespace("C_pKS2", "stats")# R 4.2.2
+        #p.value[idx] <- 1 - .Call(C_pKS2, p = KS.FACTOR * D, tol = 0.000001)
+        C_pKS2 <- utils::getFromNamespace("C_pkolmogorov_two_limit", "stats")# R 4.4.0
+        p.value[idx] <- .Call(C_pKS2, p = KS.FACTOR * D, FALSE, tol = 0.000001)
         p.adjust <- p.adjust(p.value, method = 'bonferroni')
         idx.significant <- which(p.adjust <= p.thres)
         if(length(idx.significant) == 0) stop("No regions with significant p-values were found.")
