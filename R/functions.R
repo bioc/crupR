@@ -77,20 +77,38 @@ get_targetQuantileNorm <- function(ecdf){
 ##################################################################
 # function: create extended data matrix (plus/minus) bins
 ##################################################################
+#zeros was temporarily added. remove if necessary
 
-extend_dataMatrix <- function(N, df, f){
+extend_dataMatrix <- function(N, df, f, zero.idx = NULL){
     N_regions <- nrow(df)
     f_ext <- NULL
     for (i in seq_len(N)) {
         f_ext <- c(f_ext, paste0(f, "_left", i ))
         f_ext <- c(f_ext, paste0(f, "_right", i ))
     }
-    df_ext <- cbind(df[,c(GR_header_short, f)], matrix(0, nrow = N_regions, ncol = length(f_ext)))
+    # kick out the zero rows
+    if(!is.null(zero.idx)){
+       df_ext <- cbind(df[-zero.idx, c(GR_header_short, f)], 
+                    matrix(0, nrow = N_regions - length(zero.idx), ncol = length(f_ext)))
+       nonzero.idx = seq_len(N_regions)[-zero.idx]
+    } else {
+       df_ext <- cbind(df[, c(GR_header_short, f)], 
+                matrix(0, nrow = N_regions, ncol = length(f_ext)))
+       nonzero.idx = seq_len(N_regions)
+    }
+    
     colnames(df_ext) <- c(DF_header, f, f_ext)
-    region_ext <- (N + 1):(N_regions - N)
+    region_ext <- intersect((N + 1):(N_regions - N), nonzero.idx) #not boundaries nor zero row
+    region_ext2 = as.character(region_ext)
     for (i in seq_len(N)) {
-        df_ext[region_ext, f_ext[((2*i - 2)*length(f) + 1):((2*i - 1)*length(f))]] <- df[region_ext - i, f]
-        df_ext[region_ext, f_ext[((2*i - 1)*length(f) + 1):(2*i*length(f))]] <-  df[region_ext + i, f]
+        if(is.null(zero.idx)){
+            df_ext[region_ext, f_ext[((2*i - 2)*length(f) + 1):((2*i - 1)*length(f))]] <- df[region_ext - i, f]
+            df_ext[region_ext, f_ext[((2*i - 1)*length(f) + 1):(2*i*length(f))]] <-  df[region_ext + i, f]
+        }else{
+            df_ext[region_ext2, f_ext[((2*i - 2)*length(f) + 1):((2*i - 1)*length(f))]] <- df[region_ext - i, f]
+            df_ext[region_ext2, f_ext[((2*i - 1)*length(f) + 1):(2*i*length(f))]] <-  df[region_ext + i, f]
+        }
+        
     }
     return(df_ext)
 }

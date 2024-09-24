@@ -56,7 +56,7 @@ getEnhancers <- function(data, classifier = NULL, all = FALSE,
     feat1 <- unique(gsub('_.*','',names(classifier1$forest$xlevels)))
     feat2 <- unique(gsub('_.*','',names(classifier2$forest$xlevels)))
     featAll <- unique(c(feat1, feat2))
-    
+
     ecdf_file <- system.file("extdata", "ecdf.rds", package = "crupR")
     check_file(ecdf_file)
     ecdf <- readRDS(ecdf_file)
@@ -79,8 +79,8 @@ getEnhancers <- function(data, classifier = NULL, all = FALSE,
     
     d_ext  <- extend_dataMatrix(N = 5, df = data.frame(d), f = feat1)
     zero.idx <- which(rowSums(d_ext[,-c(seq_len(3))]) == 0)
-    dNorm_ext <- extend_dataMatrix(N = 5, df = data.frame(dNorm), f = featAll)
-    dNorm_ext <- dNorm_ext[-zero.idx,]
+    dNorm_ext <- extend_dataMatrix(N = 5, df = data.frame(dNorm), f = featAll, zero.idx = zero.idx) #zero rows already removed
+    # dNorm_ext <- dNorm_ext[-zero.idx,]
     
     ##################################################################
     # make predictions

@@ -27,7 +27,22 @@ Function to save the different output objects of each step
 }
 \examples{
 \donttest{
-saveFiles(data = prediction_1_1, modes = c("bigWig", "rds"), outdir = "/example/dir/")
-saveFiles(data = dynamics, modes = "beds", outdir ="/example/dir/")
-saveFiles(data = targets, modes = "UCSC", outdir = "/example/dir/", nearest = TRUE)}
+# output directory
+example_path <- paste0(system.file("tests", package = "crupR"),"/")
+# recreate the output of getDynamics() to save
+files <- c(system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
+           system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
+           system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
+           system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
+           system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
+           system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
+inputs <- rep(system.file("extdata", "Condition1.Input.bam", package="crupR"), 3)
+inputs2 <- rep(system.file("extdata", "Condition2.Input.bam", package="crupR"), 3)  
+metaData <- data.frame(HM = rep(c("H3K4me1", "H3K4me3", "H3K27ac"),2),
+                       condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
+                       bamFile = files, inputFile = c(inputs, inputs2))
+clusters <- readRDS(system.file("extdata", "differential_enhancers.rds", package="crupR"))
+dynamics <- list("metaData" = metaData, "sumFile" = clusters)
+# save enhancer clusters as bed files
+saveFiles(data = dynamics, modes = "beds", outdir = example_path)}
 }
