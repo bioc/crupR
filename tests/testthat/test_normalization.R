@@ -1,5 +1,7 @@
 context("Normalization of the ChIPseq counts")
 library(GenomicRanges)
+library(S4Vectors)
+
 ##################################################################
 # create input data
 ##################################################################
@@ -31,7 +33,7 @@ metaData.wrong <- data.frame(HM = rep(c("H3K4me1","H3K4me3","H3K27ac"),2),
 
 metaData.if <- data.frame(HM = rep(c("H3K4me1","H3K4me3","H3K27ac"),2),
                           condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
-                          bamFile = files)#input experiment are missing
+                          bamFile = files)#input experiments are missing
 
 ##################################################################
 # test normalize()
@@ -42,24 +44,24 @@ norm.expected <- readRDS(file = system.file("extdata", "condition2_normalized.rd
 norm.if.expected <- readRDS(file = system.file("extdata", "condition2_inputfree_normalized.rds", package="crupR"))
 
 testthat::test_that("the error messages of normalize() work", {
-  testthat::expect_error(crupR::normalize(metaData = metaData, condition = 2, replicate = 2, genome = "mm10", sequencing = "paired", C = 10),
+  testthat::expect_error(crupR::normalize(metaData = metaData, condition = 2, replicate = 2, genome = "mm10", sequencing = "paired"),
                  "The chosen combination of condition and replicate is not valid.\n There are no files for condition 2 replicate 2")
 
-  testthat::expect_error(crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", sequencing = "singles", C = 10),
+  testthat::expect_error(crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", sequencing = "singles"),
                   "Sequencing parameter is not valid.\n Choose one of:paired,single")
 
-  testthat::expect_error(crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm11", sequencing = "paired", C = 10),
+  testthat::expect_error(crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm11", sequencing = "paired"),
                   "Your genome is neither one of hg19,mm10,mm9,hg38 nor is it a valid Seqinfo object.")
 
-  testthat::expect_error(crupR::normalize(metaData = metaData.wrong, condition = 2, replicate = 1, genome = "mm10", sequencing = "paired", C = 10),
+  testthat::expect_error(crupR::normalize(metaData = metaData.wrong, condition = 2, replicate = 1, genome = "mm10", sequencing = "paired"),
                          "File /wrong/directory/ConditionX.bam does not exist.")
 })
 
-testthat::test_that("The output file is okay",{
-  norm <- crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", sequencing = "paired", chroms = c("chr8"), C = 2)
-  norm_short <- norm$D[which(as.character(GenomicRanges::seqnames(norm$D))=="chr8")]
-  testthat::expect_equal(length(norm), 2)
-  testthat::expect_identical(norm$metaData, subset(metaData, condition == 2))
+testthat::test_that("the output file is okay",{
+  norm <- crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", sequencing = "paired", chroms = c("chr8"))
+  norm_short <- norm[which(as.character(GenomicRanges::seqnames(norm))=="chr8")]
+  #testthat::expect_equal(length(norm), 2)
+  testthat::expect_identical(S4Vectors::metadata(norm), subset(metaData, condition == 2))
   testthat::expect_equal(norm_short$ratio, norm.expected$ratio)
   testthat::expect_equal(norm_short$H3K27ac, norm.expected$H3K27ac)
   testthat::expect_equal(norm_short$H3K4me3, norm.expected$H3K4me3)
@@ -68,9 +70,9 @@ testthat::test_that("The output file is okay",{
 
 testthat::test_that("the inputfree mode runs w/o mistakes",{
   #run crupR::normalize in the non inputFree mode
-  norm.if <- crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", sequencing = "paired", input.free = TRUE, chroms = c("chr8"), C = 2)
-  norm.if_short <- norm.if$D[which(as.character(GenomicRanges::seqnames(norm.if$D))=="chr8")]
-  testthat::expect_equal(length(norm.if), 2)
-  testthat::expect_identical(norm.if$metaData, subset(metaData, condition == 2))
+  norm.if <- crupR::normalize(metaData = metaData, condition = 2, replicate = 1, genome = "mm10", sequencing = "paired", input.free = TRUE, chroms = c("chr8"))
+  norm.if_short <- norm.if[which(as.character(GenomicRanges::seqnames(norm.if))=="chr8")]
+  #testthat::expect_equal(length(norm.if), 2)
+  testthat::expect_identical(S4Vectors::metadata(norm.if), subset(metaData, condition == 2))
   testthat::expect_equal(norm.if_short$ratio, norm.if.expected$ratio)
 })

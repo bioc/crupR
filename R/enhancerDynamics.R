@@ -1,8 +1,34 @@
+# EDIT: Added more details to the man pages EDIT END
 #' Clusters the active enhancer into condition-specific groups
-#'
-#' @param data List containing the metadata of the experiments and
-#' the bin-wise enhancer prediction values as a GRanges object 
-#' (calculated in the prior step)
+#' @description
+#' The genome-wide enhancer probabilities from the prior step (getEnhancers) for every sample of the different conditions are
+#' compared to find condition-specific (differential) enhancers. For this, replicates of every condition respectively are merged into a group sample.
+#' The group samples are compared in a pairwise manner and regions with significant differences are considered differential enhancers. Last, the activity patterns of the 
+#' differential enhancers are indentified and enhancers with the same patterns are gouped into one cluster.
+#' 
+#' @details
+#' First, for every condition, the genome-wide enhancer probabilities of all replicates are merged into one genome-wide vector 
+#' by taking their mean and normalizing it by the group variance: mean_weighted = (mean over all replicates)/(1 - group variance + K). 
+#' K is a pseudo-count of 1, if the group variance is 1. Otherwise, K is 0.
+#' After forming the weighted mean for every condition, the summarized genome-wide probabilities are compared in a pairwise manner:
+#' A window is formed by extending the current bin by W bins to the left and right (default W = 10) and is then slid over the genome.
+#' For every position the distribution of the summarized proabilities in the window are compared using a Kolmogorov Smirnov (KS) test. 
+#' If the test detects a significant difference between the conditions, the given region is considered a differential enhancer. 
+#' The pairwise comparisons of every condition results in a list of differential enhancers. These are further divided by their activity patterns.
+#' The activtiy pattern of a differential enhancer is inferred by the conditions in which it shows differential activity and the direction of said difference
+#' (is it differentially active or inactive). The pattern is encoded in a binary manner, meaning a bit to represent the outcome of one pairwise comparison.
+#' For i.e. 3 conditions (cond1, cond2, cond3), there would be three comparisons (cond1-cond2, cond1-cond3, cond2-cond3) resulting in 6 possible outcomes.
+#' The first three bits represent the following outcomes: cond1>cond2, cond1>cond3, cond2>cond3. The last three bits represent the opposite outcomes:
+#' cond1<cond2, cond1<cond3, cond2<cond3. If any of these outcomes are true, the respective bit is set to 1, otherwise it is 0.
+#' For example, if one differential enhancer is active in cond1 and cond3, but inactive in cond2, only 2 outcomes would be true (cond1>cond2, cond2<cond3), 
+#' resulting in following acitvity pattern: 100001. 
+#' 
+#' The enhancers are divided according to their pattern into different clusters. 
+#' To reduce the number of comparisons, only windows in which the mean difference between the enhancer probabilities of the conditions
+#' surpasses a pre-defined threshold w_0 (default: 0.5) are compared.
+#' 
+#' @param data List containing the bin-wise enhancer prediction values as a GRanges object 
+#' (output of getEnhancers() or getSE()) for every condition
 #' @param w_0 The minimum difference between the normalized prediction means
 #' that two enhancers need in order to be included in the clustering. 
 #' Default is 0.5 ([0,1]).
@@ -10,109 +36,134 @@
 #'  Default is 0.05 ([0,1]).
 #' @param W Number of bins +/- the current bin that should be included 
 #' when calculating the p-values. Default is 10 ([5, 50]).
-#' @param C Number of cores to use
-#' @return A list containing the meta data of the experiments and
-#' the condition-specific clusters in a GRanges object
+#' @param BPPARAM An object of class SerialParam that is used as input for the BiocParallel functions.
+#' @return GRanges object containing the condition-specific clusters
 #' @examples                                            
 #' #recreate the outputs of getEnhancers()
-#' files <- c( system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
-#'             system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
-#'             system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
-#'             system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
-#'             system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
-#'             system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
-#' inputs <- rep(system.file("extdata", "Condition1.Input.bam", 
-#' package="crupR"), 3)
-#' inputs2 <- rep(system.file("extdata", "Condition2.Input.bam", 
-#' package="crupR"), 3)  
-#' metaData <- data.frame( HM = rep(c("H3K4me1", "H3K4me3", "H3K27ac"),2),
+#' files <- c( system.file('extdata', 'Condition1.H3K4me1.bam', package='crupR'),
+#'             system.file('extdata', 'Condition1.H3K4me3.bam', package='crupR'),
+#'             system.file('extdata', 'Condition1.H3K27ac.bam', package='crupR'),
+#'             system.file('extdata', 'Condition2.H3K4me1.bam', package='crupR'),
+#'             system.file('extdata', 'Condition2.H3K4me3.bam', package='crupR'),
+#'             system.file('extdata', 'Condition2.H3K27ac.bam', package='crupR'))
+#' inputs <- rep(system.file('extdata', 'Condition1.Input.bam', 
+#' package='crupR'), 3)
+#' inputs2 <- rep(system.file('extdata', 'Condition2.Input.bam', 
+#' package='crupR'), 3)  
+#' metaData <- data.frame( HM = rep(c('H3K4me1', 'H3K4me3', 'H3K27ac'),2),
 #'                         condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
 #'                         bamFile = files, inputFile = c(inputs, inputs2))
 #' metaData1 <- subset(metaData, condition == 1)
 #' metaData2 <- subset(metaData, condition == 2)
-#' pred1 <- readRDS(system.file(  "extdata", "condition1_predictions.rds", 
-#'                                 package = "crupR"))
-#' pred1 <- list("metaData" = metaData1, "D" = pred1)
-#' pred2 <- readRDS(system.file(  "extdata", "condition2_predictions.rds", 
-#'                                package = "crupR"))
-#' pred2 <- list("metaData" = metaData2, "D" = pred2)
+#' pred1 <- readRDS(system.file(  'extdata', 'condition1_predictions.rds', 
+#'                                 package = 'crupR'))
+#' S4Vectors::metadata(pred1) <- metaData1
+#' pred2 <- readRDS(system.file(  'extdata', 'condition2_predictions.rds', 
+#'                                package = 'crupR'))
+#' S4Vectors::metadata(pred2) <- metaData2
 #' #put the outputs in a list
 #' predictions <- list(pred1, pred2)
 #' #run the function
-#' getDynamics(data = predictions, C = 2)
+#' getDynamics(data = predictions)
 #'
 #' @export
 #' @importFrom GenomicRanges GRanges elementMetadata merge mcols granges start end reduce findOverlaps seqnames makeGRangesFromDataFrame resize
 #' @importFrom dplyr mutate lag filter setdiff
 #' @importFrom matrixStats rowVars colMedians colMaxs
-#' @import parallel
 #' @importFrom magrittr extract %>%
 #' @importFrom stats ks.test
 #' @importFrom utils combn getFromNamespace
-#' @importFrom S4Vectors queryHits subjectHits values
+#' @importFrom S4Vectors queryHits subjectHits values metadata
 #' @importFrom GenomeInfoDb keepSeqlevels
+#' @importFrom BiocParallel SerialParam
 
-getDynamics <- function(data, w_0 = 0.5, cutoff = 0.05, W = 10, C = 1){
+
+getDynamics <- function(data, w_0 = 0.5, cutoff = 0.05, W = 10, BPPARAM = BiocParallel::SerialParam()) {
     start_time <- Sys.time()
-    cat('\n')
-    
-    if(cutoff < 0 | cutoff > 1) stop(paste0(cutoff, " is not in range [0, 1]."))
-    if(w_0 < 0 | w_0 > 1) stop(paste0(w_0, " is not in range [0,1]."))
-    if(W < 10 | W > 30) stop(paste0("Choose a W in range [10,30]."))
-    if(!is.list(data) | ! all(unique(do.call(c, lapply(data, function(x) names(x)))) %in% c('metaData', 'D'))) stop('Input must be a list of lists with names: \'metaData\' and \'D\'.')
-    
-    ##################################################################
+    message("\n")
+
+    if (cutoff < 0 | cutoff > 1)
+        stop(paste0(cutoff, " is not in range [0, 1]."))
+    if (w_0 < 0 | w_0 > 1)
+        stop(paste0(w_0, " is not in range [0,1]."))
+    if (W < 2 | W > 30)
+        stop(paste0("Choose a W in range [2,30]."))
+    # EDIT: Adjuested error messages
+    if (!is.list(data))
+        stop("Input needs to be a list of enhancer predictions (getEnhancers or getSE output")
+
+    for (i in seq_along(data)) {
+        if (is.list(data[[i]])) {
+            if (!("prob" %in% colnames(GenomicRanges::mcols(data[[i]]$D)))) {
+                stop("Input needs to be the output of getEnhancers or getSE")
+            }
+        } else {
+            if (!("prob" %in% colnames(GenomicRanges::mcols(data[[i]])))) {
+                stop("Input needs to be the output of getEnhancers or getSE")
+            }
+        }
+    }
+
+    # check elements in data, if an element is getSE output, just store the
+    # data matrix
+    for (i in seq_along(data)) {
+        if (is.list(data[[i]])) {
+            data[[i]] <- data[[i]][[1]]  #replace the list with the predictions object
+        }
+    }
+    ################################################################## 
     # read and combine probabilities:
     ##################################################################
-    
-    cat("Merge enhancer probabilites for all samples and conditions ...\n")
-    
-    metaData <- do.call(rbind, lapply(data, function(x) as.data.frame(x$metaData)))
-    probsList <- lapply(data, function(x) {tmp <- x$D
-                                        GenomicRanges::mcols(tmp) <- GenomicRanges::mcols(tmp[,grep('prob$', 
-                                        colnames(mcols(tmp)))])
-                            return(tmp)})
-    
+
+    message("Merge enhancer probabilites for all samples and conditions ...\n")
+    # EDIT: adjusted these steps to the new input type EDIT END
+    metaData <- do.call(rbind, lapply(data, function(x) S4Vectors::metadata(x)))
+    probsList <- lapply(data, function(x) {
+        GenomicRanges::mcols(x) <- GenomicRanges::mcols(x[, grep("prob$", colnames(mcols(x)))])
+        return(x)
+    })
+
     conds <- unique(metaData$condition)
-    
+
     IDs <- list()
-    for(i in seq_along(conds)){
-    sub <- subset(metaData, condition == conds[i])
-    if(is.numeric(conds[i])) IDs[[i]] <- paste0("cond", conds[i], "_", 
-                                                unique(sub$replicate))
-    else IDs[[i]] <- paste0(conds[i], "_", unique(sub$replicate))
+    for (i in seq_along(conds)) {
+        sub <- subset(metaData, condition == conds[i])
+        if (is.numeric(conds[i]))
+            IDs[[i]] <- paste0("cond", conds[i], "_", unique(sub$replicate)) else IDs[[i]] <- paste0(conds[i], "_", unique(sub$replicate))
     }
-    IDs[[length(IDs)+1]] <- 'null'
-    
+    IDs[[length(IDs) + 1]] <- "null"
+
     probs <- GenomicRanges::GRanges()
-    for(i in seq_along(probsList)){
-    m <- probsList[[i]]
-    colnames(GenomicRanges::elementMetadata(m)) <- unlist(IDs)[i]
-    probs <- GenomicRanges::merge(probs, m, all = TRUE)
+    for (i in seq_along(probsList)) {
+        m <- probsList[[i]]
+        colnames(GenomicRanges::elementMetadata(m)) <- unlist(IDs)[i]
+        probs <- GenomicRanges::merge(probs, m, all = TRUE)
     }
     probs$null <- 0
-    
-    ##################################################################
+
+    ################################################################## 
     # get pairwise p-values and call differential peaks
     ##################################################################
-    
-    cat("Calculate pairwise p-values ...\n")
-    pvalues <- get_pairwisePvalues(p = probs, I = IDs, w_0 = w_0, W = W,
-                                    p.thres = cutoff, C = C)
-                                    
-    cat("Get condition-specific enhancer peaks ...\n")
-    probs <- get_cluster(p = probs, pvalues = pvalues, I = IDs)
-    
-    GenomicRanges::elementMetadata(probs)[,'null'] <- NULL
-    IDs <- IDs[-length(IDs)]
-    
-    if (length(unique(probs$cluster)) == 0){
-    stop(paste0("No significant peaks found between any two conditions.\n"))}
-    
-    cat("Combine peaks by significance pattern ...\n")
-    peaks <- get_ranges(p = probs, I = IDs, W = W, C = C)
-    
-    cat(paste0('time: ', format(Sys.time() - start_time), "\n"))
-    return(list('metaData' = metaData, 'sumFile' = peaks))
 
+    message("Calculate pairwise p-values ...\n")
+    pvalues <- get_pairwisePvalues(p = probs, I = IDs, w_0 = w_0, W = W, p.thres = cutoff,
+        BPPARAM = BPPARAM)  # EDIT changed parameters
+
+    message("Get condition-specific enhancer peaks ...\n")
+    probs <- get_cluster(p = probs, pvalues = pvalues, I = IDs)
+
+    GenomicRanges::elementMetadata(probs)[, "null"] <- NULL
+    IDs <- IDs[-length(IDs)]
+
+    if (length(unique(probs$cluster)) == 0) {
+        stop(paste0("No significant peaks found between any two conditions.\n"))
+    }
+
+    message("Combine peaks by significance pattern ...\n")
+    peaks <- get_ranges(p = probs, I = IDs, W = W, BPPARAM = BPPARAM)  # EDIT changed parameters
+
+    message(paste0("time: ", format(Sys.time() - start_time), "\n"))
+    # EDIT: adjusted the output to a single GRanges object with meta data
+    S4Vectors::metadata(peaks) <- metaData
+    return(peaks)
 }

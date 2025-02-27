@@ -7,42 +7,48 @@
 saveFiles(data, modes, outdir, nearest = FALSE)
 }
 \arguments{
-\item{data}{An output list of one of the steps 2 to 4 or the get_superEnhancer step}
+\item{data}{An output object of getEnhancers(), getSE(), getDynamics() or getTargets()}
 
 \item{modes}{Formats in which the GRanges object should be saved. Following modes are available:
-for the output of getEnhancers(): "bigWig" for a bigWig file, "rds" for an .rds file
-for the output of getDynamics(): "beds" for saving each cluster in a seperate bed file
-for the output of getTargets(): "UCSC" for a UCSC interaction file
-for the output of getSE(): "bedGraph" for saving the peak calls in a bedGraph file, "bed" for saving the clusters of peaks in a bed file}
+for the output of getEnhancers(): 'bigWig' for a bigWig file, 'rds' for an .rds file
+for the output of getDynamics(): 'beds' for saving each cluster in a seperate BED file
+for the output of getTargets(): 'UCSC' for a UCSC interaction file
+for the output of getSE(): 'bedGraph' for saving the peak calls in a 
+bedGraph file, 'bed' for saving the clusters of peaks in a BED file}
 
 \item{outdir}{Output directory in which the files should be saved}
 
-\item{nearest}{Only relevant, if you want to save the output of enhancerTargets. Specifies if the output was produced by the nearest gene mode of the function or not. Default is false.}
+\item{nearest}{Only relevant, if you want to save the output of enhancerTargets. 
+Specifies if the output was produced by the nearest gene mode of the function or not. 
+Default is FALSE.}
 }
 \value{
-Nothing
+True
 }
 \description{
-Function to save the different output objects of each step
+This functions provides an easy way to save the outcomes of every step in a suitable format. 
+The type of format available depends on the outcome itself.
 }
 \examples{
 \donttest{
 # output directory
-example_path <- paste0(system.file("tests", package = "crupR"),"/")
+example_path <- file.path(tempdir(), 'crupR') #let's use a temporary direcotry for the outputs
+dir.create(example_path) #create the directory
 # recreate the output of getDynamics() to save
-files <- c(system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
-           system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
-           system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
-inputs <- rep(system.file("extdata", "Condition1.Input.bam", package="crupR"), 3)
-inputs2 <- rep(system.file("extdata", "Condition2.Input.bam", package="crupR"), 3)  
-metaData <- data.frame(HM = rep(c("H3K4me1", "H3K4me3", "H3K27ac"),2),
+files <- c(system.file('extdata', 'Condition1.H3K4me1.bam', package='crupR'),
+           system.file('extdata', 'Condition1.H3K4me3.bam', package='crupR'),
+           system.file('extdata', 'Condition1.H3K27ac.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K4me1.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K4me3.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K27ac.bam', package='crupR'))
+inputs <- rep(system.file('extdata', 'Condition1.Input.bam', package='crupR'), 3)
+inputs2 <- rep(system.file('extdata', 'Condition2.Input.bam', package='crupR'), 3)  
+metaData <- data.frame(HM = rep(c('H3K4me1', 'H3K4me3', 'H3K27ac'),2),
                        condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
                        bamFile = files, inputFile = c(inputs, inputs2))
-clusters <- readRDS(system.file("extdata", "differential_enhancers.rds", package="crupR"))
-dynamics <- list("metaData" = metaData, "sumFile" = clusters)
+clusters <- readRDS(system.file('extdata', 'differential_enhancers.rds', 
+package='crupR'))
+S4Vectors::metadata(clusters) <- metaData
 # save enhancer clusters as bed files
-saveFiles(data = dynamics, modes = "beds", outdir = example_path)}
+saveFiles(data = clusters, modes = 'beds', outdir = example_path)}
 }

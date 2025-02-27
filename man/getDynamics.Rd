@@ -4,12 +4,17 @@
 \alias{getDynamics}
 \title{Clusters the active enhancer into condition-specific groups}
 \usage{
-getDynamics(data, w_0 = 0.5, cutoff = 0.05, W = 10, C = 1)
+getDynamics(
+  data,
+  w_0 = 0.5,
+  cutoff = 0.05,
+  W = 10,
+  BPPARAM = BiocParallel::SerialParam()
+)
 }
 \arguments{
-\item{data}{List containing the metadata of the experiments and
-the bin-wise enhancer prediction values as a GRanges object 
-(calculated in the prior step)}
+\item{data}{List containing the bin-wise enhancer prediction values as a GRanges object 
+(output of getEnhancers() or getSE()) for every condition}
 
 \item{w_0}{The minimum difference between the normalized prediction means
 that two enhancers need in order to be included in the clustering. 
@@ -21,42 +26,65 @@ Default is 0.05 ([0,1]).}
 \item{W}{Number of bins +/- the current bin that should be included 
 when calculating the p-values. Default is 10 ([5, 50]).}
 
-\item{C}{Number of cores to use}
+\item{BPPARAM}{An object of class SerialParam that is used as input for the BiocParallel functions.}
 }
 \value{
-A list containing the meta data of the experiments and
-the condition-specific clusters in a GRanges object
+GRanges object containing the condition-specific clusters
 }
 \description{
-Clusters the active enhancer into condition-specific groups
+The genome-wide enhancer probabilities from the prior step (getEnhancers) for every sample of the different conditions are
+compared to find condition-specific (differential) enhancers. For this, replicates of every condition respectively are merged into a group sample.
+The group samples are compared in a pairwise manner and regions with significant differences are considered differential enhancers. Last, the activity patterns of the 
+differential enhancers are indentified and enhancers with the same patterns are gouped into one cluster.
+}
+\details{
+First, for every condition, the genome-wide enhancer probabilities of all replicates are merged into one genome-wide vector 
+by taking their mean and normalizing it by the group variance: mean_weighted = (mean over all replicates)/(1 - group variance + K). 
+K is a pseudo-count of 1, if the group variance is 1. Otherwise, K is 0.
+After forming the weighted mean for every condition, the summarized genome-wide probabilities are compared in a pairwise manner:
+A window is formed by extending the current bin by W bins to the left and right (default W = 10) and is then slid over the genome.
+For every position the distribution of the summarized proabilities in the window are compared using a Kolmogorov Smirnov (KS) test. 
+If the test detects a significant difference between the conditions, the given region is considered a differential enhancer. 
+The pairwise comparisons of every condition results in a list of differential enhancers. These are further divided by their activity patterns.
+The activtiy pattern of a differential enhancer is inferred by the conditions in which it shows differential activity and the direction of said difference
+(is it differentially active or inactive). The pattern is encoded in a binary manner, meaning a bit to represent the outcome of one pairwise comparison.
+For i.e. 3 conditions (cond1, cond2, cond3), there would be three comparisons (cond1-cond2, cond1-cond3, cond2-cond3) resulting in 6 possible outcomes.
+The first three bits represent the following outcomes: cond1>cond2, cond1>cond3, cond2>cond3. The last three bits represent the opposite outcomes:
+cond1<cond2, cond1<cond3, cond2<cond3. If any of these outcomes are true, the respective bit is set to 1, otherwise it is 0.
+For example, if one differential enhancer is active in cond1 and cond3, but inactive in cond2, only 2 outcomes would be true (cond1>cond2, cond2<cond3), 
+resulting in following acitvity pattern: 100001. 
+
+The enhancers are divided according to their pattern into different clusters. 
+To reduce the number of comparisons, only windows in which the mean difference between the enhancer probabilities of the conditions
+surpasses a pre-defined threshold w_0 (default: 0.5) are compared.
 }
 \examples{
                                            
 #recreate the outputs of getEnhancers()
-files <- c( system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
-            system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
-            system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
-            system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
-            system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
-            system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
-inputs <- rep(system.file("extdata", "Condition1.Input.bam", 
-package="crupR"), 3)
-inputs2 <- rep(system.file("extdata", "Condition2.Input.bam", 
-package="crupR"), 3)  
-metaData <- data.frame( HM = rep(c("H3K4me1", "H3K4me3", "H3K27ac"),2),
+files <- c( system.file('extdata', 'Condition1.H3K4me1.bam', package='crupR'),
+            system.file('extdata', 'Condition1.H3K4me3.bam', package='crupR'),
+            system.file('extdata', 'Condition1.H3K27ac.bam', package='crupR'),
+            system.file('extdata', 'Condition2.H3K4me1.bam', package='crupR'),
+            system.file('extdata', 'Condition2.H3K4me3.bam', package='crupR'),
+            system.file('extdata', 'Condition2.H3K27ac.bam', package='crupR'))
+inputs <- rep(system.file('extdata', 'Condition1.Input.bam', 
+package='crupR'), 3)
+inputs2 <- rep(system.file('extdata', 'Condition2.Input.bam', 
+package='crupR'), 3)  
+metaData <- data.frame( HM = rep(c('H3K4me1', 'H3K4me3', 'H3K27ac'),2),
                         condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
                         bamFile = files, inputFile = c(inputs, inputs2))
 metaData1 <- subset(metaData, condition == 1)
 metaData2 <- subset(metaData, condition == 2)
-pred1 <- readRDS(system.file(  "extdata", "condition1_predictions.rds", 
-                                package = "crupR"))
-pred1 <- list("metaData" = metaData1, "D" = pred1)
-pred2 <- readRDS(system.file(  "extdata", "condition2_predictions.rds", 
-                               package = "crupR"))
-pred2 <- list("metaData" = metaData2, "D" = pred2)
+pred1 <- readRDS(system.file(  'extdata', 'condition1_predictions.rds', 
+                                package = 'crupR'))
+S4Vectors::metadata(pred1) <- metaData1
+pred2 <- readRDS(system.file(  'extdata', 'condition2_predictions.rds', 
+                               package = 'crupR'))
+S4Vectors::metadata(pred2) <- metaData2
 #put the outputs in a list
 predictions <- list(pred1, pred2)
 #run the function
-getDynamics(data = predictions, C = 2)
+getDynamics(data = predictions)
 
 }

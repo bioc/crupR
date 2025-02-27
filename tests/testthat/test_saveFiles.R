@@ -2,6 +2,8 @@
 context("Save the output files of crupR")
 library(GenomicRanges)
 library(rtracklayer)
+library(S4Vectors)
+library(fs)
 
 ##################################################################
 # create input data
@@ -26,29 +28,32 @@ metaData <- data.frame(HM = rep(c("H3K4me1","H3K4me3","H3K27ac"),2),
 metaData2 <- subset(metaData, condition == 2)
 
 #recreate normalize() output
-data_matrix <- readRDS(file = system.file("extdata", "condition2_normalized.rds", package="crupR"))
-norm = list("metaData" = metaData2, "D" = data_matrix)
+norm <- readRDS(file = system.file("extdata", "condition2_normalized.rds", package="crupR"))
+metadata(norm) <- metaData2
 
 #recreate getSE() output
 pred2 <- readRDS(system.file("extdata", "condition2_predictions.rds", package = "crupR"))
+metadata(pred2) <- metaData2
 peaks <- readRDS(file = system.file("extdata", "condition2_peaks.rds", package="crupR"))
 cluster <- readRDS(file = system.file("extdata", "condition2_clusters.rds", package="crupR"))
-pred2 <- list("metaData" = metaData2, "D" = pred2, "peaks" = peaks, "clusters" = cluster)
+se2 <- list("D" = pred2, "peaks" = peaks, "cluster" = cluster)
 
 #recreate getDynamics output
-sumFile <- readRDS(system.file("extdata", "differential_enhancers.rds", package = "crupR"))
-dynamics <- list("metaData" = metaData, "sumFile" = sumFile)
+dynamics <- readRDS(system.file("extdata", "differential_enhancers.rds", package = "crupR"))
+metadata(dynamics) <- metaData
 
 #recreate getTargets output
-units <- readRDS(system.file("extdata", "RegulatoryUnits.rds", package="crupR"))
-targets <- list("metaData" = metaData, "Units" = units)
+targets <- readRDS(system.file("extdata", "RegulatoryUnits.rds", package="crupR"))
+metadata(targets) <- metaData
 
+#create test direcotry
+test.path <- file.path(tempdir(), "crupR") #let"s use a temporary direcotry for the outputs
+dir.create(test.path) #create the directory
 ##################################################################
 # test enhancerDynamics()
 ##################################################################
 
 testthat::test_that("the error messages of saveFiles() work",{
-  test.path <- paste0(system.file("extdata", package = "crupR"), "/")
   testthat::expect_error(crupR::saveFiles(data = pred2, modes = c("rds"), outdir = "/wrong/path/"),
                          "Directory /wrong/path/ doesn't exist!", fixed = TRUE)
   
@@ -69,30 +74,31 @@ testthat::test_that("the error messages of saveFiles() work",{
                          fixed = TRUE)
   
   testthat::expect_error(crupR::saveFiles(data = norm, modes = c("rds"), outdir = test.path),
-                         "Outputs of normalize() can't be saved using this function, use saveRDS() instead.",
+                         "Only outputs of getEnhancers or getSE() can be saved in the modes rds and/or bigWig.",
                          fixed = TRUE)
   
 })
 
 testthat::test_that("saveFiles runs as expected",{
-  test.path <- paste0(system.file("extdata", package = "crupR"), "/")
-  out.rds <- paste0(test.path, "prediction.rds")
-  out.bw <- paste0(test.path, "prediction.bw")
-  out.bedGraph <- paste0(test.path, "singleEnh.bedGraph")
-  out.bed <- paste0(test.path, "clusterEnh.bed")
-  out.beds <- paste0(test.path, "dynamicEnh__cluster_c1.bed")
-  out.ucsc <- paste0(test.path, "RegulatoryUnits.interaction")
+  #test.path <- paste0(system.file("extdata", package = "crupR"), "/")
+  out.rds <- paste0(test.path, "/prediction.rds")
+  out.bw <- paste0(test.path, "/prediction.bw")
+  out.bedGraph <- paste0(test.path, "/singleEnh.bedGraph")
+  out.bed <- paste0(test.path, "/clusterEnh.bed")
+  out.beds <- paste0(test.path, "/dynamicEnh__cluster_c1.bed")
+  out.ucsc <- paste0(test.path, "/RegulatoryUnits.interaction")
   files <- c(out.rds, out.bw, out.bedGraph, out.bed, out.beds, out.ucsc)
   
-  crupR::saveFiles(data = pred2, modes = c("rds", "bigWig", "bedGraph", "bed"), outdir = test.path)
+  crupR::saveFiles(data = se2, modes = c("rds", "bigWig", "bedGraph", "bed"), outdir = test.path)
   crupR::saveFiles(data = dynamics, modes = c("beds"), outdir = test.path)
   crupR::saveFiles(data = targets, modes = c("UCSC"), outdir = test.path)
   
   test.file <- readRDS(out.rds)
   
   testthat::expect_true(all(file.exists(files)))
-  testthat::expect_equal(pred2$D$prob, test.file$prob, tolerance = 1e-5)
-  file.remove(files)
+  testthat::expect_equal(pred2$prob, test.file$prob, tolerance = 1e-5)
+  file.remove(files)#delete the files
+  unlink(test.path, recursive = TRUE) #delete the directory
 })
 
 

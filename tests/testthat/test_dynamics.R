@@ -2,6 +2,7 @@
 context("Find condition-specific enhancers")
 library(GenomicRanges)
 library(rtracklayer)
+library(S4Vectors)
 
 ##################################################################
 # create input data
@@ -27,11 +28,11 @@ metaData2 <- subset(metaData, condition == 2)
 
 
 pred1 <- readRDS(system.file("extdata", "condition1_predictions.rds", package = "crupR"))
+metadata(pred1) <- metaData1
 #colnames(GenomicRanges::mcols(pred1)) <- c("prob")
-pred1 <- list("metaData" = metaData1, "D" = pred1)
 pred2 <- readRDS(system.file("extdata", "condition2_predictions.rds", package = "crupR"))
+metadata(pred2) <- metaData2
 #colnames(GenomicRanges::mcols(pred2)) <- c("prob")
-pred2 <- list("metaData" = metaData2, "D" = pred2)
 
 preds <- list(pred1, pred2)
 
@@ -41,19 +42,18 @@ preds <- list(pred1, pred2)
 
 testthat::test_that("the error messages of getDynamics() work",{
 
-  testthat::expect_error(crupR::getDynamics(data = preds, w_0 = 1.2, C = 10),
+  testthat::expect_error(crupR::getDynamics(data = preds, w_0 = 1.2),
                          "1.2 is not in range [0,1].", fixed = TRUE)
 
-  testthat::expect_error(crupR::getDynamics(data = preds, cutoff = -0.5, C = 10),
+  testthat::expect_error(crupR::getDynamics(data = preds, cutoff = -0.5),
                          "-0.5 is not in range [0, 1].", fixed = TRUE)
 })
 
 testthat::test_that("getDynamics runs as expected",{
   dynamics.expected <- readRDS(system.file("extdata", "differential_enhancers.rds", package = "crupR"))
-  dynamics <- crupR::getDynamics(data = preds, C = 2)
-  testthat::expect_equal(length(dynamics), 2)
-  testthat::expect_equal(length(dynamics$sumFile), 1)
-  testthat::expect_equal(dynamics$sumFile$cond1_1, dynamics.expected$cond1_1, tolerance = 1e-9)
+  dynamics <- crupR::getDynamics(data = preds)
+  testthat::expect_equal(length(dynamics), 1)
+  testthat::expect_equal(dynamics$cond1_1, dynamics.expected$cond1_1, tolerance = 1e-9)
 })
 
 

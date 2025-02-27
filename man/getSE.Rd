@@ -2,39 +2,53 @@
 % Please edit documentation in R/get_superEnhancers.R
 \name{getSE}
 \alias{getSE}
-\title{Uses the enhancer predictions to find clusters of enhancers ('superenhancer' - like).}
+\title{Find enhancer peaks and super enhancers}
 \usage{
-getSE(data, cutoff = 0.5, distance = 12500, C = 1)
+getSE(
+  data,
+  cutoff = 0.5,
+  distance = 12500,
+  BPPARAM = BiocParallel::SerialParam()
+)
 }
 \arguments{
-\item{data}{List containing the meta data of the experiments and the enhancer prediction values in a GRanges object calculated by enhancerPrediction()}
+\item{data}{enhancer prediction values in a GRanges object (output of getEnhancers())}
 
-\item{cutoff}{Cutoff for enhancer probabilities. Default is 0.5.}
+\item{cutoff}{Cut-off for enhancer probabilities. Default is 0.5.}
 
-\item{distance}{Maximum distance (bp) for clustering. Default is 12500}
+\item{distance}{Maximum distance (in bp) for clustering. Default is 12500.}
 
-\item{C}{Number of cores to use}
+\item{BPPARAM}{An object of class SerialParam that is used as input for the BiocParallel functions.}
 }
 \value{
-A list containing the meta data of the experiments, the enhancer prediction values as a GRanges object (like the input data),
-the enhancer peak calls as a GRanges object (can be exported as a bedGraph) and the cluster of peaks in a GRanges object (can be exported as bed file)
+A list containing the enhancer prediction values as a GRanges object (like the input data),
+the enhancer peak calls as a GRanges object (can be exported as a bedGraph) and the clusters of peaks 
+(super-enhancers) in a GRanges object (can be exported as BED file)
 }
 \description{
-Uses the enhancer predictions to find clusters of enhancers ('superenhancer' - like).
+An optional intermediate step to summarize the genome-wide enhancer predictions from the prior step (getEnhancers). First, enhancer peaks are detected.
+Next, neighbouring enhancer peaks are further grouped together into super-enhancers, which we define as clusters of proximal enhancer regions.
+}
+\details{
+First, enhancer peaks are identified. All bins with an enhancer probability >=0.5 are sorted in a descending manner by their probabilities.
+The bins are then extended by 5 bins up and downstream resulting in regions of size 1100bp. Overlapping regions are discarded, 
+while keeping the region with the higher enhancer probability. The resulting list of enhancer peaks is further summarized 
+into clusters by grouping peaks in close vicinity (default: max. 12.5kb up-/downstream distance) together. These clusters are supposed to reflect
+super-enhancers.
 }
 \examples{
 
 # first recreate the output of crupR:getPredictions
-files <- c(system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
-inputs <- rep(system.file("extdata", "Condition2.Input.bam", package="crupR"), 3)
+files <- c(system.file('extdata', 'Condition2.H3K4me1.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K4me3.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K27ac.bam', package='crupR'))
+inputs <- rep(system.file('extdata', 'Condition2.Input.bam', package='crupR'), 3)
 #create the metaData frame
-metaData <- data.frame(HM = c("H3K4me1","H3K4me3","H3K27ac"),
+metaData <- data.frame(HM = c('H3K4me1','H3K4me3','H3K27ac'),
                        condition = c(2,2,2), replicate = c(1,1,1),
                        bamFile = files, inputFile = inputs)
-pred <- readRDS(system.file("extdata", "condition2_predictions.rds", package="crupR"))                                                                                           
-prediction <- list(metaData = metaData, D = pred)
+prediction <- readRDS(system.file('extdata', 'condition2_predictions.rds', package='crupR'))                                                                                           
+S4Vectors::metadata(prediction) <- metaData
 #run the function
-getSE(data = prediction, C = 2)
+se <- getSE(data = prediction)
 }

@@ -6,54 +6,66 @@
 \usage{
 getTargets(
   data,
-  expr,
+  expr = NULL,
   genome,
   TAD.file = NULL,
   cutoff = 0.9,
   nearest = FALSE,
-  C = 1
+  BPPARAM = BiocParallel::SerialParam()
 )
 }
 \arguments{
-\item{data}{Outputfile of the previous step (getDynamics())}
+\item{data}{condition-specific clusters in a GRanges object (output of getDynamics())}
 
-\item{expr}{GRanges object containing the gene expression counts of RNAseq experiments for each condition and its replicates}
+\item{expr}{SummarizedExperiment object containing the gene expression counts of RNA-seq experiments for each condition and its replicates}
 
-\item{genome}{Genome used in the .bam files of the RNAseq experiments. Possible options are 'mm9', 'mm10', 'hg19' and 'hg38'.}
+\item{genome}{Genome used in the .bam files of the RNA-seq experiments. Possible options are 'mm9', 'mm10', 'hg19' and 'hg38'.}
 
 \item{TAD.file}{Path to the TAD file to use for finding the target genes. If set to NULL, the default file is used (only if the 'mm10' genome was used)}
 
-\item{cutoff}{cutoff for correlation between cluster and gene. Default is 0.9.}
+\item{cutoff}{cut-off for correlation between cluster and gene. Default is 0.9.}
 
-\item{nearest}{Logical: if set, the nearest gene is taken to build the regulatory regions.}
+\item{nearest}{[LOGICAL] If set, the nearest gene is taken to build the regulatory regions.}
 
-\item{C}{Number of cores to use}
+\item{BPPARAM}{An object of class SerialParam that is used as input for the BiocParallel functions.}
 }
 \value{
-A list containing the meta data of the experiments
-and a GRanges object containing the dynamic regulatory units
+GRanges object containing the dynamic regulatory units
 }
 \description{
-Find the target genes of the regulatory, condition-specific clusters
+This functions aims to connect the differential enhancers identified in the prior step (getDynamics) to the potential target genes.
+It exploits normalized gene expression counts for every samples, derived from RNA-seq experiments, and correlates the gene activities 
+with predicted enhancer probabilities over each replicate of all conditions. If there is high correlation between a gene and an enhancer,
+the respective gene is considered a target gene of the enhancer. The number of comparisons is narrowed down by only comparing enhancers to genes within the same 
+topologically associating domain (TAD). Alternatively, one can also just check the nearest gene for every enhancer.
+}
+\details{
+This functions depends on the presence of gene expression counts for every every sample. These can 
+be created by using e.g. DESeq2. For an example code of how to get the counts, check /inst/script/crupR_example_files.txt. 
+
+This functions compares the gene expression counts of the candidate target genes for a differential enhancer and correlates
+them to the enhancer probabilities as computed in getEnhancers. If the correlation surpasses a threshold (default: 0.9), the candidate gene is considered
+a target gene. There are two ways to define candidate target genes: Either by using the topologically associating domains (TADs) as boundaries for potential interactions or
+in case no TAD annotations are available, the nearest gene of the respective differential enhancer is considered.
 }
 \examples{
 
 #first get the output of crupR::getDynamics so skip this
-files <- c(system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
-           system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
-           system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
-           system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
-inputs <- rep(system.file("extdata", "Condition1.Input.bam", package="crupR"), 3)
-inputs2 <- rep(system.file("extdata", "Condition2.Input.bam", package="crupR"), 3)  
-metaData <- data.frame(HM = rep(c("H3K4me1", "H3K4me3", "H3K27ac"),2),
+files <- c(system.file('extdata', 'Condition1.H3K4me1.bam', package='crupR'),
+           system.file('extdata', 'Condition1.H3K4me3.bam', package='crupR'),
+           system.file('extdata', 'Condition1.H3K27ac.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K4me1.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K4me3.bam', package='crupR'),
+           system.file('extdata', 'Condition2.H3K27ac.bam', package='crupR'))
+inputs <- rep(system.file('extdata', 'Condition1.Input.bam', package='crupR'), 3)
+inputs2 <- rep(system.file('extdata', 'Condition2.Input.bam', package='crupR'), 3)  
+metaData <- data.frame(HM = rep(c('H3K4me1', 'H3K4me3', 'H3K27ac'),2),
                        condition = c(1,1,1,2,2,2), replicate = c(1,1,1,1,1,1),
                        bamFile = files, inputFile = c(inputs, inputs2))
-clusters <- readRDS(system.file("extdata", "differential_enhancers.rds", package="crupR"))
-dynamics <- list("metaData" = metaData, "sumFile" = clusters)
-#load your GRanges object containing the gene expressions counts and run the function
-expr <- readRDS(system.file("extdata", "expressions.rds", package="crupR"))
-getTargets(data = dynamics, expr = expr, genome = "mm10", C = 2)
+clusters <- readRDS(system.file('extdata', 'differential_enhancers.rds', package='crupR'))
+S4Vectors::metadata(clusters) <- metaData
+#load your SummarizedExperiments object containing the gene expressions counts and run the function
+expr <- readRDS(system.file('extdata', 'expressions.rds', package='crupR'))
+getTargets(data = clusters, expr = expr, genome = 'mm10')
 
 }

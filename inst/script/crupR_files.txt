@@ -1,1 +1,7 @@
-The files that are being used by the crupR functions directly and are not part of the tests (the classifiers, the edcf file, the mm10 TAD boundaries) have been taking from the original CRUP publication.
+The files that are being used by the crupR functions directly and are not part of the tests (the classifiers, the edcf file, the mm10 TAD boundaries) have been taking from the original CRUP publication (ramisch et. al., 2019).
+
+Classifiers: https://github.com/VerenaHeinrich/CRUP/tree/master/DATA/CLASSIFIER/active_vs_inactive.rds and https://github.com/VerenaHeinrich/CRUP/tree/master/DATA/CLASSIFIER/enhancer_vs_active_promoter.rds respectively.
+
+ecdf file for the quantile normalization: https://github.com/VerenaHeinrich/CRUP/tree/master/DATA/CLASSIFIER/ecdf.rds
+
+TADs for the mm10 genome: https://github.com/VerenaHeinrich/CRUP/tree/master/DATA/mESC_mapq30_KR_all_TADs.bed

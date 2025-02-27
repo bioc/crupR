@@ -4,36 +4,42 @@
 \alias{getEnhancers}
 \title{Predicts the occurence of enhancers using the normalized HMs counts.}
 \usage{
-getEnhancers(data, classifier = NULL, all = FALSE, C = 1)
+getEnhancers(data, classifier = NULL, all = FALSE)
 }
 \arguments{
-\item{data}{List containing the metaData of the experiments that were normalized and also the normalized counts as GRanges object (basically the output of the normalize() step)}
+\item{data}{normalized ChIP-seq counts in a GRanges object (output of the normalize() step)}
 
-\item{classifier}{The path of the classifier to use for the prediction. When set to NULL (default), the default clasifier is used.}
+\item{classifier}{The path of the classifier to use for the prediction. When set to NULL (default), the default classifier is used. 
+Both classifiers are objects of class 'randomForest' as implemented by the randomForest package. For more information on this object, please check the documentation of randomForest.}
 
-\item{all}{Output of separated probabilities. Default is FALSE.}
-
-\item{C}{Number of cores to use. Default is 1.}
+\item{all}{[LOGICAL] Whether to include the probabilities of the two individual random forests in the output. Default is FALSE.}
 }
 \value{
-A list containing the meta data of the experiments whose enhancers were predicted and
-the enhancer probabilities for each 100 bp bin in the genome as a GRanges object
+GRanges object containing the enhancer probabilities for each 100bp bin
 }
 \description{
-Predicts the occurence of enhancers using the normalized HMs counts.
+This function gets the output of the prior normalization step as input and uses the three histone modifications to predict the probability of an active enhancer being present.
+}
+\details{
+First, the input-normalized histone modification counts are quantile-normalized. 
+This way their distribution is matching to what the classifiers have been trained on.
+Next, the two random forest classifiers go through every bin and use the 5 upstream and downstream flanking bins to make predictions. 
+One classifiers predicts whether the current bin is an active region based on the surrounding histone modification patterns.
+The other predicts whether the current bin is an enhancer or promoter, assuming it's already active. 
+Last, the predicted probabilities of each classifier for every bin are mulitplied and their product forms the final binwise enhancer activity probability.
 }
 \examples{
 #first recreate the output of crupR::normalize (so skip this)
-files <- c(system.file("extdata", "Condition2.H3K4me1.bam", package="crupR"),
-          system.file("extdata", "Condition2.H3K4me3.bam", package="crupR"),
-          system.file("extdata", "Condition2.H3K27ac.bam", package="crupR"))
-inputs <- rep(system.file("extdata", "Condition2.Input.bam", package="crupR")) 
-metaData <- data.frame(HM = c("H3K4me1","H3K4me3","H3K27ac"),
+files <- c(system.file('extdata', 'Condition2.H3K4me1.bam', package='crupR'),
+          system.file('extdata', 'Condition2.H3K4me3.bam', package='crupR'),
+          system.file('extdata', 'Condition2.H3K27ac.bam', package='crupR'))
+inputs <- rep(system.file('extdata', 'Condition2.Input.bam', package='crupR')) 
+metaData <- data.frame(HM = c('H3K4me1','H3K4me3','H3K27ac'),
                     condition = c(2,2,2), replicate = c(1,1,1),
                     bamFile = files, inputFile = inputs)
-d <- readRDS(system.file("extdata", "condition2_normalized.rds", package="crupR"))
-norm <- list(metaData = metaData, D = d)
+norm <- readRDS(system.file('extdata', 'condition2_normalized.rds', package='crupR'))
+S4Vectors::metadata(norm) <- metaData
 #let's run the actual function
-getEnhancers(data = norm, C = 2)
+getEnhancers(data = norm)
 
 }

@@ -1,25 +1,21 @@
 Package: crupR
 Type: Package
-Title: an R package to predict condition-specific enhancers from ChIP-seq data
-Version: 0.99.1
+Title: An R package to predict condition-specific enhancers from ChIP-seq data
+Version: 0.99.2
 Authors@R: c(
    person("Persia", "Akbari Omgba", email = "omgba@molgen.mpg.de", role = c("cre")),
-   person("Verena", "Laupert", email = "verena.laupert@bayer.com", role = c("aut")),
+   person("Verena", "Laupert", role = c("aut")),
    person("Martin", "Vingron", email = "vingron@molgen.ppg.com", role = c("aut")))
-Description: An R package offers a workflow to predict condition-specific enhancers from ChIP-seq data.
-    The prediction of regulatory units is done in four main Steps:
-    Step 1 is the normalization of the ChIP-seq counts.
-    Step 2 is the actual prediction of active enhancers bin-wise on the whole genome.
-    Step 3 is the condition-specific clustering of the putative active enhancers.
-    Step 4 is the search for possible target genes of the condition-specific clusters using RNA-seq counts.
+Description: An R package that offers a workflow to predict condition-specific enhancers from ChIP-seq data.
+    The prediction of regulatory units is done in four main steps:
+    Step 1 - the normalization of the ChIP-seq counts.
+    Step 2 - the prediction of active enhancers binwise on the whole genome.
+    Step 3 - the condition-specific clustering of the putative active enhancers.
+    Step 4 - the detection of possible target genes of the condition-specific clusters using RNA-seq counts.
 License: GPL-3
 Encoding: UTF-8
 LazyData: false
 Imports: 
-    BSgenome.Mmusculus.UCSC.mm10,
-    BSgenome.Mmusculus.UCSC.mm9,
-    BSgenome.Hsapiens.UCSC.hg19,
-    BSgenome.Hsapiens.UCSC.hg38,
     bamsignals,
     Rsamtools,
     GenomicRanges,
@@ -28,7 +24,6 @@ Imports:
     rtracklayer,
     GenomeInfoDb,
     S4Vectors,
-    parallel,
     ggplot2,
     matrixStats,
     dplyr,
@@ -39,12 +34,14 @@ Imports:
     TxDb.Mmusculus.UCSC.mm9.knownGene,
     TxDb.Hsapiens.UCSC.hg19.knownGene,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
-    BSgenome,
     reshape2,
     magrittr,
     stats,
     utils,
-    grDevices
+    grDevices,
+    SummarizedExperiment,
+    BiocParallel,
+    fs
 Depends:
     R (>= 4.4.0)
 Suggests: testthat, BiocStyle, knitr, rmarkdown
@@ -56,5 +53,6 @@ biocViews:
     PeakDetection
 BiocType: Software
 URL: https://github.com/akbariomgba/crupR
-RoxygenNote: 7.3.1
+BugReports: https://github.com/akbariomgba/crupR/issues
+RoxygenNote: 7.3.2
 VignetteBuilder: knitr

@@ -1,7 +1,7 @@
 context("Find super enhancers")
 library(GenomicRanges)
 library(rtracklayer)
-
+library(S4Vectors)
 ##################################################################
 # create input data
 ##################################################################
@@ -18,9 +18,9 @@ metaData.short <- data.frame(HM = c("H3K4me1","H3K4me3","H3K27ac"),
                              condition = c(1,1,1), replicate = c(1,1,1),
                              bamFile = files.short, inputFile = inputs)
 
-pred <- readRDS(file = system.file("extdata", "condition2_predictions.rds", package="crupR"))
-colnames(GenomicRanges::mcols(pred)) <- c("prob")
-prediction <- list("metaData" = metaData.short, "D" = pred)
+prediction <- readRDS(file = system.file("extdata", "condition2_predictions.rds", package="crupR"))
+colnames(GenomicRanges::mcols(prediction)) <- c("prob")
+metadata(prediction) <- metaData.short
 
 ##################################################################
 # test get_superEnhancers()
@@ -33,12 +33,11 @@ testthat::test_that("the error messages of getSE() work", {
                         "-100 is not a valid distance. Please choose a distance greater than 0.")
 })
 
-#se <- crupR::getSE(data = prediction, C = 2)
 testthat::test_that("getSE() runs as expected",{
   peaks.expected <- readRDS(file = system.file("extdata", "condition2_peaks.rds", package="crupR"))
   cluster.expected <- readRDS(file = system.file("extdata", "condition2_clusters.rds", package="crupR"))
-  se <- crupR::getSE(data = prediction, C = 2)
-  testthat::expect_equal(length(se), 4)
+  se <- crupR::getSE(data = prediction)
+  testthat::expect_equal(length(se), 3)
   testthat::expect_equal(length(se$peaks), 2)
   testthat::expect_equal(length(se$cluster), 1)
   testthat::expect_identical(GenomicRanges::start(se$peaks), GenomicRanges::start(peaks.expected))

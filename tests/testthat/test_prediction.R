@@ -2,6 +2,7 @@
 context("Enhancer Prediction")
 library(GenomicRanges)
 library(rtracklayer)
+library(S4Vectors)
 ##################################################################
 # create input data
 ##################################################################
@@ -21,10 +22,8 @@ metaData.short <- data.frame(HM = c("H3K4me1","H3K4me3","H3K27ac"),
 
 pred.expected <- readRDS(file = system.file("extdata", "condition2_predictions.rds", package="crupR"))
 #the actual normalized counts
-data_matrix <- readRDS(file = system.file("extdata", "condition2_normalized.rds", package="crupR"))
-
-#create a list
-norm = list(metaData = metaData.short, D = data_matrix)
+norm <- readRDS(file = system.file("extdata", "condition2_normalized.rds", package="crupR"))
+metadata(norm) <- metaData.short
 
 ##################################################################
 # test enhancerPrediction()
@@ -32,13 +31,11 @@ norm = list(metaData = metaData.short, D = data_matrix)
 
 testthat::test_that("the error messages of getEnhancers() work", {
 
-  testthat::expect_error(crupR::getEnhancers(data = norm, classifier = "/wrong/directory/classifier/", C = 4),
+  testthat::expect_error(crupR::getEnhancers(data = norm, classifier = "/wrong/directory/classifier/"),
                          "/wrong/directory/classifier/ is not a valid directory")
 })
 testthat::test_that("getEnhancers() runs as expected",{
-  pred <- crupR::getEnhancers(data = norm, C = 2)
-  pred_short <- pred$D[which(as.character(GenomicRanges::seqnames(pred$D)) == "chr8")]
-  testthat::expect_equal(length(pred), 2)
+  pred <- crupR::getEnhancers(data = norm)
+  pred_short <- pred[which(as.character(GenomicRanges::seqnames(pred)) == "chr8")]
   testthat::expect_equal(pred_short$prob, pred.expected$prob, tolerance = 1e-5)
 })
-
