@@ -25,11 +25,10 @@ knitr::opts_chunk$set(
     comment = "#>")
 ```
 # Installation
-```{r installation}
-#if(!require("BiocManager", quietly = TRUE))
-#    install.packages("BiocManager")
-#BiocManager::install("crupR")
-library(crupR)
+```{r installation, eval=FALSE}
+if(!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("crupR")
 ```
 
 
@@ -63,6 +62,7 @@ Let's look at the metadata for the example files.
 First, we'll need the paths to the BAM files of the histone modifications and the input experiments.
 
 ```{r setup-for-metadata}
+library(crupR)
 files <- c(system.file("extdata", "Condition1.H3K4me1.bam", package="crupR"),
            system.file("extdata", "Condition1.H3K4me3.bam", package="crupR"),
            system.file("extdata", "Condition1.H3K27ac.bam", package="crupR"),
