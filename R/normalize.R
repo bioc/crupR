@@ -54,6 +54,7 @@
 #' @importFrom GenomicAlignments summarizeOverlaps
 #' @importFrom S4Vectors metadata
 #' @importFrom BiocParallel SerialParam
+#' @importFrom methods is
 
 normalize <- function(metaData, condition, replicate, genome, mapq = 10, sequencing,
     input.free = FALSE, chroms = NULL, BPPARAM = BiocParallel::SerialParam()) {

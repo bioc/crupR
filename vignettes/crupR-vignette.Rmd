@@ -296,7 +296,8 @@ In total, there are 6 possible formats: "bigWig", "bedGraph", "rds", "bed", "bed
 
 
 ```{r show-saveFiles, eval = FALSE}
-out_dir <- ""
+out_dir <- file.path(tempdir(), 'crupR') #let's use a temporary direcotry for the outputs
+dir.create(out_dir) #create the directory
 #save the GRanges object of the getEnhancers() step
 saveFiles(data = prediction_1, modes = c("bigWig", "rds"), outdir = out_dir)
 #save the GRanges object of the getSE() step

@@ -1,7 +1,7 @@
 Package: crupR
 Type: Package
 Title: An R package to predict condition-specific enhancers from ChIP-seq data
-Version: 0.99.3
+Version: 0.99.4
 Authors@R: c(
    person("Persia", "Akbari Omgba", email = "omgba@molgen.mpg.de", role = c("cre")),
    person("Verena", "Laupert", role = c("aut")),
@@ -41,7 +41,8 @@ Imports:
     grDevices,
     SummarizedExperiment,
     BiocParallel,
-    fs
+    fs,
+    methods
 Depends:
     R (>= 4.4.0)
 Suggests: testthat, BiocStyle, knitr, rmarkdown

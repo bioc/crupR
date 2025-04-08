@@ -41,6 +41,8 @@
 #' @keywords crupR
 NULL
 
+#' @importFrom utils globalVariables
+globalVariables(c("condition", "value"))
 
 ################################################################## 
 # definition: valid parameter values:
