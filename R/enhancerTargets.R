@@ -47,7 +47,7 @@
 #' @export
 #' @importFrom GenomicRanges mcols GRanges makeGRangesFromDataFrame start end promoters strand seqnames nearest distance
 #' @importFrom GenomicFeatures genes
-#' @importFrom GenomeInfoDb seqlevels seqlengths
+#' @importFrom Seqinfo seqlevels seqlengths
 #' @importFrom IRanges IRanges subsetByOverlaps %within%
 #' @import TxDb.Mmusculus.UCSC.mm9.knownGene
 #' @import TxDb.Mmusculus.UCSC.mm10.knownGene
@@ -67,8 +67,8 @@ getTargets <- function(data, expr = NULL, genome, TAD.file = NULL, cutoff = 0.9,
     metaData <- S4Vectors::metadata(data)
     conds <- unique(metaData$condition)
     gr <- data
-    GenomeInfoDb::seqlevels(gr) <- paste0("chr", gsub("chr|Chr", "", GenomeInfoDb::seqlevels(gr)))
-    GenomeInfoDb::genome(gr) <- genome
+    Seqinfo::seqlevels(gr) <- paste0("chr", gsub("chr|Chr", "", Seqinfo::seqlevels(gr)))
+    Seqinfo::genome(gr) <- genome
 
     IDs <- list()
     for (i in seq_along(conds)) {
@@ -111,7 +111,7 @@ getTargets <- function(data, expr = NULL, genome, TAD.file = NULL, cutoff = 0.9,
         TAD <- read.table(TAD.file, col.names = GR_header_short)
         TAD <- GenomicRanges::makeGRangesFromDataFrame(TAD[which((TAD$end - TAD$start) >
             0), ])
-        GenomeInfoDb::seqlevels(TAD) <- paste0("chr", gsub("chr|Chr", "", GenomeInfoDb::seqlevels(TAD)))
+        Seqinfo::seqlevels(TAD) <- paste0("chr", gsub("chr|Chr", "", Seqinfo::seqlevels(TAD)))
     }
     units <- get_units(gr, expr, TAD, unlist(IDs), BPPARAM = BPPARAM, cutoff, txdb,
         nearest)

@@ -42,15 +42,15 @@
 #'     genome = 'mm10', sequencing = 'paired')
 #' 
 #' #Example for a customized genome:
-#' genome = GenomeInfoDb::Seqinfo( seqnames=c('chr3', 'chr4', 'chrM'),
-#'                                 seqlengths=c(1000, 2000, 500))
+#' genome = Seqinfo::Seqinfo(seqnames=c('chr3', 'chr4', 'chrM'),
+#'                           seqlengths=c(1000, 2000, 500))
 #'
 #' @export
 #' @importFrom bamsignals bamProfile
 #' @importFrom Rsamtools scanBamHeader BamFile
 #' @importFrom stats knots
 #' @importFrom GenomicRanges seqinfo mcols tileGenome width
-#' @importFrom GenomeInfoDb seqlevelsStyle seqlevels getChromInfoFromUCSC
+#' @importFrom Seqinfo seqlevels
 #' @importFrom GenomicAlignments summarizeOverlaps
 #' @importFrom S4Vectors metadata
 #' @importFrom BiocParallel SerialParam
@@ -168,7 +168,7 @@ normalize <- function(metaData, condition, replicate, genome, mapq = 10, sequenc
 
     GenomicRanges::mcols(gr) <- matrix(unlist(countsNorm), ncol = 3, byrow = FALSE,
         dimnames = list(NULL, hm_values))
-    GenomeInfoDb::seqlevels(gr) <- paste0("chr", gsub("chr|Chr", "", GenomeInfoDb::seqlevels(gr)))
+    Seqinfo::seqlevels(gr) <- paste0("chr", gsub("chr|Chr", "", Seqinfo::seqlevels(gr)))
 
     n <- GenomicRanges::mcols(gr)[, "H3K4me1"] + abs(min(GenomicRanges::mcols(gr)[,
         "H3K4me1"])) + 1

@@ -92,7 +92,7 @@ After creating the data frame with the metadata, you are ready to run *crupR*.
 
 ## Step 0: Normalize the ChIP-seq counts
 
-This is a preparatory function that generates input-normalized genome-wide enrichment profiles of the 3 HMs and computes the ratio of H3K4me1 and H3K4me3 counts for a genome of choice. The genome builds mm9, mm10, hg19 and hg38 are already supported by `normalize()` and custom genomes can be used if provided by the user as a [Seqinfo object](https://rdrr.io/bioc/GenomeInfoDb/man/Seqinfo-class.html). 
+This is a preparatory function that generates input-normalized genome-wide enrichment profiles of the 3 HMs and computes the ratio of H3K4me1 and H3K4me3 counts for a genome of choice. The genome builds mm9, mm10, hg19 and hg38 are already supported by `normalize()` and custom genomes can be used if provided by the user as a [Seqinfo object](https://rdrr.io/bioc/Seqinfo/man/Seqinfo-class.html). 
 `normalize()` first creates a binned genome object (binsize = 100bp) and then computes the ChIP-seq counts for every bin derived from the BAM files. Low quality reads are filtered during this process (default min. quality: 10). For the input-normalization the log2 fold change between the ChIP-seq counts of the histone modifications and of the input experiments is formed: 
 $Count^{HM}_{norm}(bin) = log_2 \frac{Count^{HM}_{raw}(bin)}{Count^{Input}_{norm}(bin)}$.
 The ratio is computed as 

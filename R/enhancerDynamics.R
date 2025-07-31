@@ -74,7 +74,6 @@
 #' @importFrom stats ks.test
 #' @importFrom utils combn getFromNamespace
 #' @importFrom S4Vectors queryHits subjectHits values metadata
-#' @importFrom GenomeInfoDb keepSeqlevels
 #' @importFrom BiocParallel SerialParam
 
 

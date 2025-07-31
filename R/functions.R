@@ -102,10 +102,10 @@ check_outdir <- function(d, alt_d) {
 
 get_binned_genome <- function(genome, chr = NULL) {
     if (!is.null(chr)) {
-        GenomeInfoDb::seqlevels(genome) <- chr
+        Seqinfo::seqlevels(genome) <- chr
     } else {
-        GenomeInfoDb::seqlevels(genome) <- GenomeInfoDb::seqlevels(genome)[grep("^chr[0-9]{,2}$|chrX$",
-            GenomeInfoDb::seqlevels(genome))]
+        Seqinfo::seqlevels(genome) <- Seqinfo::seqlevels(genome)[grep("^chr[0-9]{,2}$|chrX$",
+            Seqinfo::seqlevels(genome))]
     }
     binned <- GenomicRanges::tileGenome(genome, tilewidth = 100, cut.last.tile.in.chrom = TRUE)
     return(binned[-which(GenomicRanges::width(binned) != 100)])
@@ -590,8 +590,8 @@ get_units <- function(regions.gr, expr.se, TAD.gr, I, BPPARAM, cutoff, txdb, nea
             cutoff, regions.gr, expr.se, TAD.gr, I), BPPARAM = BPPARAM)
     } else {
         suppressMessages(genes <- GenomicFeatures::genes(txdb))
-        GenomeInfoDb::seqlevels(genes, pruning.mode = "coarse") <- GenomeInfoDb::seqlevels(regions.gr)
-        GenomeInfoDb::seqlengths(regions.gr) <- GenomeInfoDb::seqlengths(genes)
+        Seqinfo::seqlevels(genes, pruning.mode = "coarse") <- Seqinfo::seqlevels(regions.gr)
+        Seqinfo::seqlengths(regions.gr) <- Seqinfo::seqlengths(genes)
         list <- BiocParallel::bplapply(seq(length(regions.gr)), function(x) get_nearest_gene(x,
             regions.gr, genes, I), BPPARAM = BPPARAM)
     }
